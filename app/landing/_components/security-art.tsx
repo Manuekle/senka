@@ -1,308 +1,110 @@
 "use client";
 
-/**
- * The scenes on the self-hosted cards.
- *
- * Same grammar as `capability-art.tsx` and the same kit — a small built
- * interface, still at rest, resolving under the cursor. What differs is the
- * subject: these six are the things the software does to be trustworthy rather
- * than the things it does for a customer, so every one of them is a guarantee
- * and every guarantee is a line of code.
- *
- * ── Each card names a file, and the file is real ─────────────────────
- *
- *   database  the durable state lives in the operator's own Postgres
- *   sandbox   agent/sandbox — `networkPolicy: "deny-all"` on both runtimes
- *   webhooks  lib/stripe.ts `verifyStripeWebhookSignature`, and the same
- *             scheme in lib/elevenlabs-agents.ts; Meta's channels verify an
- *             HMAC over the raw body with the App Secret
- *   keys      credentials are read on the operator's machine, not a panel
- *   allowlist lib/http-guard.ts `assertSafeUrl` — HTTPS, public host, named
- *             in the allowlist, no loopback, no private range, no raw IP
- *   traces    agent/instrumentation.ts, OpenTelemetry to the operator's
- *             own collector
- *
- * A security section is the one place on a landing page where an unearned
- * claim is not a stretch but a lie, so nothing here is written ahead of the
- * code. If a guarantee moves, its card moves with it.
- */
-
-import { HugeiconsIcon } from "@/components/icons/icon";
-import {
-  Cancel01Icon,
-  Database01Icon,
-  GlobalIcon,
-  AuthorizedIcon,
-  LockKeyIcon,
-  SourceCodeIcon,
-  Tick02Icon,
-  WebhookIcon,
-} from "@hugeicons/core-free-icons";
 import type { ReactNode } from "react";
-import { at, Bloom, Brackets, Chip, Figure, Mono, Plate, Row, Scene, SwapPlate } from "./scene-kit";
+import { ArtLabel, InstrumentArt, instrumentStyles as styles } from "./instrument-art";
 
-// ── 01 · Tu base de datos ───────────────────────────────────────────
-
-/**
- * Rows landing in a table that belongs to the operator.
- *
- * The claim is ownership, not capacity, so the scene is small and the label is
- * the connection string's host — `localhost`, because that is where it is when
- * you run it yourself.
- */
+/** These illustrations describe existing guarantees, without adding metrics or certifications. */
 export function DatabaseScene() {
-  return (
-    <Scene>
-      {/* On the connection, because that is the claim: the light is on the
-          host name, and the tables under it are just what fills. */}
-      <Bloom className="-top-2 left-2 h-28 w-48" />
-
-      <div className="space-y-2">
-        <Row>
-          <Plate active className="size-7" icon={Database01Icon} tint="blue" />
-          <Mono className="min-w-0 flex-1 truncate text-muted-foreground transition-colors duration-500 group-hover:text-foreground">
-            postgres://localhost
-          </Mono>
-        </Row>
-        <div className="flex gap-1.5">
-          {[0, 1, 2].map((row) => (
-            <span
-              className="h-6 flex-1 rounded-md bg-[var(--lp-glass)] opacity-50 shadow-[inset_0_0_0_1px_var(--lp-glass-edge)] transition-opacity duration-500 group-hover:opacity-100"
-              key={row}
-              style={at(row * 90)}
-            />
-          ))}
-        </div>
-      </div>
-    </Scene>
-  );
+  return <InstrumentArt>{m => <>
+    <path d="m50 151 110-56 110 56-110 57Z" stroke={m.edge} fill={m.metal} opacity=".55" />
+    <path d="m68 152 92-46 92 46-92 45Z" stroke={m.edge} opacity=".4" />
+    <g className={styles.lift}>
+      {[116, 90, 64].map((y, i) => <g key={y}>
+        <path d={`M107 ${y}v27c0 26 106 26 106 0V${y}`} fill={m.metal} stroke={m.edge} />
+        <ellipse cx="160" cy={y} rx="53" ry="17" fill={m.metal} stroke={m.edge} />
+        <path d={`M117 ${y + 26}q43 20 86 0`} stroke="var(--art-accent)" strokeOpacity=".22" />
+        <circle cx="192" cy={y + 26} r="1.8" fill="var(--art-accent)" opacity={1 - i * .2} />
+      </g>)}
+      <ellipse cx="160" cy="64" rx="40" ry="11" stroke={m.edge} strokeOpacity=".5" />
+    </g>
+    <path d="M42 110h29l36 18M213 128l28-18h36" stroke={m.edge} />
+    <path className={styles.signal} d="M42 110h29l36 18" stroke="var(--art-accent)" />
+    <ArtLabel>PostgreSQL · localhost</ArtLabel>
+  </>}</InstrumentArt>;
 }
 
-// ── 02 · Sandbox aislado ────────────────────────────────────────────
-
-/**
- * Code running with the network cut.
- *
- * The interesting half is the denial, so the globe is what changes: at rest it
- * is simply there, on hover it is struck out and the policy names itself. The
- * string is `deny-all` verbatim because that is the value in the config.
- */
 export function SandboxScene() {
-  return (
-    <Scene>
-      {/* The light is on the code, and it stops at the globe — which is the
-          whole guarantee drawn as lighting: one object in the beam, the other
-          one out of it. */}
-      <Bloom className="-translate-x-1/2 -translate-y-1/2 top-[2rem] left-[calc(50%-1.6rem)] h-28 w-28" />
-
-      <div className="flex flex-col items-center gap-3">
-        <div className="relative flex items-center gap-5 px-5 py-2">
-          <Brackets className="inset-x-0 inset-y-0" />
-          <Plate active className="size-12 rounded-xl" icon={SourceCodeIcon} size={21} tint="violet" />
-          <span className="relative flex size-12 items-center justify-center">
-            <span className="lp-plate flex size-12 items-center justify-center rounded-xl text-muted-foreground transition-opacity duration-500 group-hover:opacity-30">
-              <HugeiconsIcon icon={GlobalIcon} size={21} strokeWidth={1.75} />
-            </span>
-            <span
-              className="absolute inset-0 flex items-center justify-center text-foreground opacity-0 transition-opacity duration-500 group-hover:opacity-100"
-              style={at(160)}
-            >
-              <HugeiconsIcon icon={Cancel01Icon} size={20} strokeWidth={2.25} />
-            </span>
-          </span>
-        </div>
-        <Chip
-          className="translate-y-2 text-muted-foreground opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100"
-          icon={LockKeyIcon}
-          style={at(240)}
-        >
-          networkPolicy: deny-all
-        </Chip>
-      </div>
-    </Scene>
-  );
+  return <InstrumentArt tone="violet">{m => <>
+    <path d="m59 153 101-54 101 54-101 55Z" fill={m.metal} stroke={m.edge} />
+    <path d="m75 149 85-45 85 45-85 46Z" stroke={m.edge} opacity=".5" />
+    <path d="M100 125V59l60-32 60 32v66l-60 32Z" fill={m.beam} stroke={m.edge} strokeOpacity=".5" />
+    <path d="m100 59 60 33 60-33M160 92v65" stroke={m.edge} strokeDasharray="3 4" />
+    <g className={styles.lift}>
+      <path d="m124 111 36-20 36 20v33l-36 20-36-20Z" fill={m.metal} stroke={m.edge} />
+      <path d="m124 111 36 20 36-20m-36 20v33" stroke={m.edge} />
+      <path d="m149 108-7 4 7 4m22-8 7 4-7 4m-8-12-6 17" stroke="var(--art-accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </g>
+    <path d="M220 110h22m10 0h25" stroke={m.edge} strokeDasharray="2 4" />
+    <path d="m242 105 9 10m0-10-9 10" stroke="var(--art-accent)" strokeWidth="1.3" />
+    <ArtLabel>Docker · network: deny-all</ArtLabel>
+  </>}</InstrumentArt>;
 }
 
-// ── 03 · Webhooks firmados ──────────────────────────────────────────
-
-/**
- * A payload arriving with a signature, and the signature checking out.
- *
- * The comparison is the whole point — `timingSafeEqual` over an HMAC of the
- * raw body — so the scene shows two digests meeting rather than a padlock.
- * A padlock is a mood; two hashes lining up is the mechanism.
- */
 export function WebhookScene() {
-  return (
-    <Scene>
-      {/* Low and under the second row: the signature check is the half that
-          matters, so the light is where the digests meet. */}
-      <Bloom className="bottom-0 left-0 h-32 w-56 opacity-50 transition-opacity duration-700 group-hover:opacity-100" />
-
-      <div className="space-y-2">
-        <Row>
-          <Plate active className="size-7" icon={WebhookIcon} tint="emerald" />
-          <Mono className="min-w-0 flex-1 truncate text-muted-foreground transition-colors duration-500 group-hover:text-foreground">
-            POST /api/webhooks
-          </Mono>
-        </Row>
-        {/* The digest at display size, cut out of the dark. It is the thing
-            being compared, so it is drawn as the object of the scene rather
-            than as a 10px label in a row — the same move the payments card
-            makes with its amount, for the same reason. */}
-        <div className="relative pt-2">
-          <span className="flex items-center gap-3">
-            <SwapPlate className="size-7" delay={220} from={LockKeyIcon} to={Tick02Icon} />
-            <Mono className="text-muted-foreground">sha256</Mono>
-          </span>
-
-          <span className="block">
-            <Figure className="mt-1 block truncate font-mono text-[1.75rem] tracking-[-0.02em]" muted>
-              a3f1…
-            </Figure>
-            <span className="relative mt-2 block h-3.5">
-              <Mono className="absolute inset-0 text-muted-foreground transition-opacity duration-500 group-hover:opacity-0">
-                verificando…
-              </Mono>
-              <Mono
-                className="absolute inset-0 text-muted-foreground opacity-0 transition-opacity duration-500 group-hover:opacity-100"
-                style={at(300)}
-              >
-                firma válida
-              </Mono>
-            </span>
-          </span>
-        </div>
-      </div>
-    </Scene>
-  );
+  return <InstrumentArt tone="jade">{m => <>
+    {[0, 1, 2].map(i => <g key={i} transform={`translate(${i * 8} ${-i * 9})`} opacity={.35 + i * .2}>
+      <rect x="39" y="87" width="61" height="76" rx="8" fill={m.metal} stroke={m.edge} />
+      <path d="M51 104h24m-24 8h34m-34 8h28" stroke="var(--art-ink)" strokeOpacity=".25" />
+      <text x="51" y="143" className={styles.detail}>{'{…}'}</text>
+    </g>)}
+    <path d="M115 113h45m18 0h42" stroke={m.edge} />
+    <path className={styles.signal} d="M115 113h105" stroke="var(--art-accent)" strokeWidth="1.5" />
+    <rect x="155" y="52" width="13" height="122" rx="6.5" fill={m.metal} stroke={m.edge} />
+    <rect className={styles.scan} x="160" y="61" width="3" height="104" rx="1.5" fill="var(--art-accent)" />
+    <circle cx="243" cy="113" r="38" stroke={m.edge} strokeWidth=".7" />
+    <circle cx="243" cy="113" r="28" fill={m.metal} stroke={m.edge} />
+    <path d="m230 112 9 9 17-18" stroke="var(--art-accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    <ArtLabel>payload → HMAC → verificado</ArtLabel>
+  </>}</InstrumentArt>;
 }
 
-// ── 04 · Tus claves ─────────────────────────────────────────────────
-
-/**
- * The keys, and where they are not.
- *
- * "On your machine" is a negative claim — it is about the panel that does not
- * hold them — so the scene states the path instead of drawing a vault.
- */
 export function KeysScene() {
-  return (
-    <Scene>
-      {/* The sparsest scene in either grid — one object and one path — so it
-          is the one composed most like the reference: a single thing, lit from
-          directly above, with the frame marked around it and nothing else in
-          the light. */}
-      <div className="relative flex flex-col items-center gap-3 py-2">
-        <Brackets className="-inset-x-6 -inset-y-1" />
-        <Bloom className="-translate-x-1/2 -top-6 left-1/2 h-28 w-36" />
-
-        <Plate active className="size-10 rounded-xl" icon={AuthorizedIcon} size={18} tint="amber" />
-        <Chip
-          className="text-muted-foreground opacity-60 transition-all duration-500 group-hover:text-muted-foreground group-hover:opacity-100"
-          style={at(140)}
-        >
-          ~/.senka · tu servidor
-        </Chip>
-      </div>
-    </Scene>
-  );
+  return <InstrumentArt tone="amber">{m => <>
+    <rect x="78" y="52" width="164" height="126" rx="16" fill={m.metal} stroke={m.edge} opacity=".5" />
+    <rect x="84" y="45" width="152" height="126" rx="13" fill={m.metal} stroke={m.edge} />
+    <path d="M98 66h24m77 0h23M99 151h123" stroke={m.edge} />
+    <circle cx="160" cy="107" r="41" fill={m.metal} stroke={m.edge} />
+    <circle cx="160" cy="107" r="34" stroke={m.edge} strokeDasharray="1 4" />
+    <g className={styles.lift} stroke="var(--art-accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="150" cy="103" r="9" />
+      <path d="m157 109 17 17m-5-5 5-5m-10 0 5-5" />
+    </g>
+    <g fill="var(--art-accent)" opacity=".45">{[0, 1, 2, 3, 4, 5, 6, 7].map(i => <circle key={i} cx={133 + i * 8} cy="151" r="1.3" />)}</g>
+    <path d="M44 111h34m164 0h34" stroke={m.edge} strokeDasharray="2 5" />
+    <ArtLabel>credenciales · en tu servidor</ArtLabel>
+  </>}</InstrumentArt>;
 }
 
-// ── 05 · Allowlist de hosts ─────────────────────────────────────────
-
-/**
- * Two outbound calls: the one that is allowed and the one that is not.
- *
- * Both hosts are shown at rest with nothing decided, and hover is the guard
- * running — a tick on the named host, a cross on the other. Drawing only the
- * allowed call would make the allowlist look like a convenience; the refusal
- * is the feature.
- */
 export function AllowlistScene() {
-  const hosts = [
-    { allowed: true, name: "api.tu-tienda.com" },
-    { allowed: false, name: "10.0.0.5" },
-  ];
-
-  return (
-    <Scene>
-      {/* On the host that passes. The refused one sits outside the light,
-          which is the same argument the copy makes. */}
-      <Bloom className="-top-4 left-0 h-28 w-52" />
-
-      <div className="space-y-2">
-        {hosts.map((host, index) => (
-          <Row
-            className={`transition-colors duration-500 ${host.allowed ? "group-hover:border-input" : ""}`}
-            key={host.name}
-            style={at(index * 90)}
-          >
-            <SwapPlate
-              className="size-7"
-              delay={180 + index * 90}
-              from={GlobalIcon}
-              tint="cyan"
-              to={host.allowed ? Tick02Icon : Cancel01Icon}
-            />
-            <Mono
-              className={`min-w-0 flex-1 truncate transition-all duration-500 ${
-                host.allowed
-                  ? "text-muted-foreground group-hover:text-foreground"
-                  : "text-muted-foreground group-hover:line-through group-hover:opacity-50"
-              }`}
-              style={at(200 + index * 90)}
-            >
-              {host.name}
-            </Mono>
-          </Row>
-        ))}
-      </div>
-    </Scene>
-  );
+  return <InstrumentArt tone="jade">{m => <>
+    <path d="M50 114h59q17 0 17-17V85q0-17 17-17h66M109 114q17 0 17 17v10q0 17 17 17h66" stroke={m.edge} />
+    <path className={styles.signal} d="M50 114h59q17 0 17-17V85q0-17 17-17h66" stroke="var(--art-accent)" strokeWidth="1.3" />
+    <path d="m64 91 22 9v21q0 16-22 27-22-11-22-27v-21Z" fill={m.metal} stroke={m.edge} />
+    <path d="m55 117 7 7 12-14" stroke="var(--art-accent)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    <rect x="181" y="49" width="105" height="39" rx="9" fill={m.metal} stroke={m.edge} />
+    <circle cx="197" cy="68" r="4" fill="var(--art-accent)" opacity=".55" />
+    <text x="208" y="71" className={styles.detail}>HTTPS :443</text>
+    <rect x="181" y="138" width="105" height="39" rx="9" fill={m.metal} stroke={m.edge} opacity=".5" />
+    <path d="m193 154 7 7m0-7-7 7" stroke="var(--muted-foreground)" />
+    <text x="208" y="161" className={styles.detail}>10.0.0.5</text>
+    <ArtLabel>hosts autorizados · acceso selectivo</ArtLabel>
+  </>}</InstrumentArt>;
 }
 
-// ── 06 · Trazas propias ─────────────────────────────────────────────
-
-/**
- * A trace drawing itself across the operator's own collector.
- *
- * Spans of different lengths at different offsets, because that is what a
- * waterfall looks like and a row of equal bars looks like a chart. They fill
- * left to right on hover, in the order they would have been recorded.
- */
 export function TracesScene() {
-  const spans = [
-    { left: 0, width: 100 },
-    { left: 12, width: 62 },
-    { left: 30, width: 38 },
-    { left: 46, width: 20 },
-  ];
-
-  return (
-    <Scene>
-      <Bloom className="-translate-y-1/2 top-[0.9rem] left-0 h-24 w-32" />
-
-      <div className="space-y-2.5">
-        <div className="flex items-center gap-3">
-          <Plate active className="size-7" icon={SourceCodeIcon} tint="rose" />
-          <Mono className="text-muted-foreground transition-colors duration-500 group-hover:text-foreground">
-            OpenTelemetry
-          </Mono>
-        </div>
-        <div className="space-y-1.5">
-          {spans.map((span, index) => (
-            <span className="block h-2" key={span.left} style={{ paddingLeft: `${span.left}%` }}>
-              <span
-                className="block h-full origin-left scale-x-0 rounded-full bg-foreground/20 transition-all duration-500 group-hover:scale-x-100 group-hover:bg-foreground/45"
-                style={{ ...at(index * 90), width: `${span.width}%` }}
-              />
-            </span>
-          ))}
-        </div>
-      </div>
-    </Scene>
-  );
+  return <InstrumentArt tone="blue">{m => <>
+    <rect x="42" y="42" width="236" height="141" rx="12" fill={m.metal} stroke={m.edge} />
+    <path d="M42 70h236" stroke={m.edge} strokeOpacity=".5" />
+    <circle cx="56" cy="56" r="2" fill="var(--art-accent)" /><path d="M65 56h46" stroke="var(--art-ink)" strokeOpacity=".25" />
+    <text x="215" y="59" className={styles.detail}>trace_id</text>
+    {[92, 132, 172, 212, 252].map(x => <path key={x} d={`M${x} 80v87`} stroke="var(--art-ink)" strokeOpacity=".055" />)}
+    {[{ x: 61, w: 189 }, { x: 86, w: 127 }, { x: 113, w: 79 }, { x: 143, w: 40 }].map((bar, i) => <g key={bar.x}>
+      {i > 0 && <path d={`M${bar.x - 14} ${84 + i * 21}v12h10`} stroke={m.edge} />}
+      <rect x={bar.x} y={82 + i * 21} width={bar.w} height="11" rx="3" fill={m.beam} stroke={m.edge} />
+      <path className={styles.scan} style={{ animationDelay: `${i * -.8}s` }} d={`M${bar.x + 4} ${85 + i * 21}h${bar.w - 8}`} stroke="var(--art-accent)" strokeOpacity=".6" strokeLinecap="round" />
+    </g>)}
+    <ArtLabel>OpenTelemetry · tu colector</ArtLabel>
+  </>}</InstrumentArt>;
 }
 
 export const SECURITY_ART: Record<string, () => ReactNode> = {

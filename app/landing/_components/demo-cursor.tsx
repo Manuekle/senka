@@ -2,6 +2,7 @@
 
 import gsap from "gsap";
 import { type RefObject, useEffect, useRef, useState } from "react";
+export { useStageLive } from "./use-stage-live";
 
 /**
  * The hand that drives the screens.
@@ -88,67 +89,6 @@ export function useDemoLoop<TPhase extends string>(
     step: state.step,
     cycle: state.cycle,
   };
-}
-
-/** `prefers-reduced-motion`, watched. */
-function useReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(false);
-
-  useEffect(() => {
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const sync = () => setReduced(query.matches);
-    sync();
-    query.addEventListener("change", sync);
-    return () => query.removeEventListener("change", sync);
-  }, []);
-
-  return reduced;
-}
-
-/**
- * Whether a flow should be playing at all.
- *
- * Three gates, and each one is a real cost avoided rather than a nicety: a
- * mockup eight thousand pixels down the page still runs its own script, a
- * background tab still burns the timer, and a visitor who asked their system
- * for less motion asked this page too.
- */
-export function useStageLive(ref: RefObject<HTMLElement | null>): boolean {
-  const reduced = useReducedMotion();
-  const [live, setLive] = useState(false);
-
-  useEffect(() => {
-    const node = ref.current;
-    if (!node || reduced) {
-      setLive(false);
-      return;
-    }
-
-    let onScreen = false;
-    const sync = () => setLive(onScreen && document.visibilityState === "visible");
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        onScreen = entries.some((entry) => entry.isIntersecting);
-        sync();
-      },
-      // A screen is taller than most viewports, so any sliver of it counts —
-      // a threshold would stop the flow while the reader is looking at it.
-      { rootMargin: "0px" },
-    );
-    observer.observe(node);
-    document.addEventListener("visibilitychange", sync);
-    // A tab restored from the back/forward cache fires neither of the above.
-    window.addEventListener("pageshow", sync);
-
-    return () => {
-      observer.disconnect();
-      document.removeEventListener("visibilitychange", sync);
-      window.removeEventListener("pageshow", sync);
-    };
-  }, [ref, reduced]);
-
-  return live;
 }
 
 // ── Where the pointer goes ──────────────────────────────────────────

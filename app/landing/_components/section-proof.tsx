@@ -6,7 +6,7 @@ import proof from "@/content/proof.json";
 import { useT } from "@/lib/i18n/provider";
 import type { GlobeClient } from "./client-globe";
 import { ClientGlobe } from "./deferred-globe";
-import { useStageLive } from "./demo-cursor";
+import { useStageLive } from "./use-stage-live";
 import { FigureLabel, Haze, Reveal, Shell } from "./primitives";
 import { SalesContactDialog } from "./sales-contact-dialog";
 

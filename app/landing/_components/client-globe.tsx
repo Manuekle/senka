@@ -3,7 +3,7 @@
 import createGlobe from "cobe";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { useStageLive } from "./demo-cursor";
+import { useStageLive } from "./use-stage-live";
 
 /**
  * A client, placed on the world. `id` is the cobe marker id; `name` and `logo`

@@ -114,10 +114,11 @@ export function SignupDialog({
 
         <div className="flex flex-col gap-3">
           <Button asChild className="h-11 w-full text-[15px]" variant="secondary">
-            <Link href="/api/auth/google/start">
+            {/* OAuth is a server redirect, never an RSC route to prefetch. */}
+            <a href="/api/auth/google/start">
               <GoogleLogo size={17} />
               {t("landing.signup.google")}
-            </Link>
+            </a>
           </Button>
 
           <div className="my-1 flex items-center gap-3 text-xs text-muted-foreground">
@@ -161,11 +162,11 @@ export function SignupDialog({
 
         <p className="mt-2 text-center text-[11px] leading-relaxed text-muted-foreground">
           {t("landing.signup.termsPrefix")}{" "}
-          <Link className="underline underline-offset-2 hover:text-foreground" href="/terms">
+          <Link className="underline underline-offset-2 hover:text-foreground" href="/terms" prefetch={false}>
             {t("landing.signup.terms")}
           </Link>{" "}
           {t("landing.signup.and")}{" "}
-          <Link className="underline underline-offset-2 hover:text-foreground" href="/privacy">
+          <Link className="underline underline-offset-2 hover:text-foreground" href="/privacy" prefetch={false}>
             {t("landing.signup.privacy")}
           </Link>
           .

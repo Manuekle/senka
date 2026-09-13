@@ -1,0 +1,46 @@
+.art {
+  --art-accent: oklch(0.57 0.065 255);
+  --art-ink: var(--foreground);
+  --art-metal-top: oklch(0.97 0.005 255);
+  --art-metal: oklch(0.91 0.008 255);
+  --art-metal-bottom: oklch(0.85 0.01 255);
+  position: relative;
+  width: 100%;
+  max-width: 24rem;
+  margin-inline: auto;
+  isolation: isolate;
+}
+:global(.dark) .art {
+  --art-accent: oklch(0.72 0.065 255);
+  --art-metal-top: oklch(0.255 0.008 255);
+  --art-metal: oklch(0.175 0.006 255);
+  --art-metal-bottom: oklch(0.135 0.004 255);
+}
+.art[data-tone="violet"] { --art-accent: oklch(0.58 0.07 285); }
+.art[data-tone="jade"] { --art-accent: oklch(0.54 0.055 165); }
+.art[data-tone="amber"] { --art-accent: oklch(0.58 0.06 78); }
+:global(.dark) .art[data-tone="violet"] { --art-accent: oklch(0.73 0.075 285); }
+:global(.dark) .art[data-tone="jade"] { --art-accent: oklch(0.71 0.055 165); }
+:global(.dark) .art[data-tone="amber"] { --art-accent: oklch(0.74 0.055 78); }
+.art > svg { display: block; width: 100%; height: auto; overflow: visible; }
+.grid { stroke: var(--art-ink); stroke-opacity: .035; stroke-width: .6; }
+.fiducials { stroke: var(--art-ink); stroke-opacity: .18; stroke-width: .65; }
+.label { fill: var(--muted-foreground); font: 9px var(--font-mono); letter-spacing: .06em; }
+.detail { fill: var(--muted-foreground); font: 8px var(--font-mono); }
+.lift { transition: transform 700ms cubic-bezier(.22, 1, .36, 1); }
+:global(.group:hover) .lift { transform: translateY(-5px); }
+.wave { transform-origin: 244px 106px; animation: wave-breathe 5s ease-in-out infinite; }
+.voiceBar { transform-box: fill-box; transform-origin: center; animation: voice-level 2.3s ease-in-out infinite; }
+.orbit { transform-origin: 153px 106px; animation: orbit 24s linear infinite; }
+.signal { stroke-dasharray: 8 180; animation: signal 6s linear infinite; }
+.scan { animation: scan 6s ease-in-out infinite; }
+.art[data-live="false"] :is(.wave, .voiceBar, .orbit, .signal, .scan) { animation-play-state: paused; }
+@keyframes wave-breathe { 0%, 100% { transform: scaleY(.7); opacity: .65; } 50% { transform: scaleY(1.12); opacity: 1; } }
+@keyframes voice-level { 0%, 100% { transform: scaleY(.6); } 48% { transform: scaleY(1); } 72% { transform: scaleY(.8); } }
+@keyframes orbit { to { transform: rotate(360deg); } }
+@keyframes signal { to { stroke-dashoffset: -188; } }
+@keyframes scan { 0%, 100% { opacity: .3; } 50% { opacity: .9; } }
+@media (prefers-reduced-motion: reduce) {
+  .art *, .art *::before, .art *::after { animation: none !important; transition: none !important; }
+  :global(.group:hover) .lift { transform: none; }
+}
