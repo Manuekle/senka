@@ -6,6 +6,7 @@ import proof from "@/content/proof.json";
 import { useT } from "@/lib/i18n/provider";
 import type { GlobeClient } from "./client-globe";
 import { ClientGlobe } from "./deferred-globe";
+import { DitherTerrain, type RidgePoint } from "./dither-terrain";
 import { useStageLive } from "./use-stage-live";
 import { FigureLabel, Haze, Reveal, Shell } from "./primitives";
 import { SalesContactDialog } from "./sales-contact-dialog";
@@ -98,6 +99,28 @@ const TESTIMONIALS: readonly Testimonial[] = (
 const HOLD_MS = 8000;
 /** The crossfade itself. */
 const FADE_MS = 420;
+
+/**
+ * The skyline of the dithered ground, as [across, down] fractions of the
+ * section at `lg` and up.
+ *
+ * Low and nearly flat under the copy column — the left 44%, where the heading,
+ * the quote and the rail are — so the ground there is a band below the rail
+ * and never under a line of text. Past the column it climbs, and it keeps
+ * climbing behind the globe: the sphere is opaque, so the hill disappears
+ * behind it and what shows is ground around its lower rim and under it. The
+ * world sits in the landscape instead of floating over an empty half-page.
+ */
+const GROUND: readonly RidgePoint[] = [
+  [0, 0.92],
+  [0.18, 0.95],
+  [0.36, 0.95],
+  [0.5, 0.92],
+  [0.58, 0.74],
+  [0.68, 0.6],
+  [0.82, 0.5],
+  [1, 0.44],
+];
 
 /** The headshot, or the initials plate the app uses for a contact without one. */
 function Avatar({ name, src }: { readonly name: string; readonly src?: string }) {
@@ -344,6 +367,13 @@ export function ProofSection() {
           marker — two ids on one element is a choice between them, and both
           were linkable while this was two sections. */}
       <span aria-hidden="true" className="-top-20 absolute block h-20 w-px" id="testimonios" />
+
+      {/* ── The ground ──────────────────────────────────────────────────
+          First in the section, so everything positioned after it — the globe
+          included — paints over it. From `lg` only: below that the section
+          stacks and the rail and the quote run full width, so there is no
+          empty half for the ground to stand in, only text to sit under. */}
+      <DitherTerrain className="inset-0 hidden lg:block" ridge={GROUND} />
 
       {/* ── The globe band ──────────────────────────────────────────────
           Its own positioning context, so the sphere is centred on the copy and

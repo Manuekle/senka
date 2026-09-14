@@ -5,6 +5,7 @@ import { claimChatModelSync } from "../../lib/chat-model-store";
 import { getInstallationId } from "../../lib/license/installation";
 import { billingSourceForProvider } from "../../lib/credit-gate";
 import { recordUsage } from "../../lib/ai-usage";
+import { activeBusinessId } from "../../lib/business-scope";
 
 // Turns Eve's own step.completed usage into an AIUsage row and, when the
 // call drew on included credits, a ledger charge — see lib/ai-usage.ts and
@@ -37,6 +38,7 @@ export default defineHook({
 
         await recordUsage({
           organizationId,
+          workspaceId: await activeBusinessId(),
           conversationId: ctx.session.id,
           channel: channelFromKind(ctx.channel.kind),
           provider,

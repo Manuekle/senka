@@ -4,8 +4,14 @@ import { HugeiconsIcon } from "@/components/icons/icon";
 import { Blockchain05Icon, Target01Icon, Tick02Icon, WebhookIcon } from "@hugeicons/core-free-icons";
 import type { ReactNode } from "react";
 import { at, Bloom, Brackets, Chip, Mono, Plate, Row, Scene } from "./scene-kit";
-import { VoiceInstrument as VoiceScene } from "./instrument-art";
-import { KnowledgeScene, HandoffScene, CalendarScene, LeadsScene, PaymentsScene } from "./capability-instruments";
+import {
+  CalendarBlueprint as CalendarScene,
+  HandoffBlueprint as HandoffScene,
+  KnowledgeBlueprint as KnowledgeScene,
+  LeadsBlueprint as LeadsScene,
+  PaymentsBlueprint as PaymentsScene,
+  VoiceBlueprint as VoiceScene,
+} from "./capability-blueprints";
 
 export { KnowledgeScene, HandoffScene, CalendarScene, LeadsScene, PaymentsScene, VoiceScene };
 

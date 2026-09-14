@@ -1,0 +1,133 @@
+/* The capability drawings as a technical plate: blue ink on the page's own
+   ground, square corners, one weight of line, nothing that moves and nothing
+   that glows. Every value is a plain colour or an alpha over it — no
+   `color-mix(…, transparent)`, which the build folds to full alpha. */
+
+.sheet {
+  --bp-line: oklch(0.5 0.16 262);
+  --bp-grid: oklch(0.5 0.16 262 / 0.055);
+  --bp-grid-major: oklch(0.5 0.16 262 / 0.1);
+  background-image:
+    linear-gradient(var(--bp-grid-major) 1px, transparent 1px),
+    linear-gradient(90deg, var(--bp-grid-major) 1px, transparent 1px),
+    linear-gradient(var(--bp-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--bp-grid) 1px, transparent 1px);
+  background-size: 96px 96px, 96px 96px, 16px 16px, 16px 16px;
+  background-position: -1px -1px;
+}
+:global(.dark) .sheet {
+  --bp-line: oklch(0.74 0.11 262);
+  --bp-grid: oklch(0.74 0.11 262 / 0.05);
+  --bp-grid-major: oklch(0.74 0.11 262 / 0.09);
+}
+
+.plane {
+  --bp-line: oklch(0.5 0.16 262);
+  --bp-ground: var(--background);
+  color: var(--bp-line);
+  width: 100%;
+  max-width: 30rem;
+  margin-inline: auto;
+}
+:global(.dark) .plane {
+  --bp-line: oklch(0.74 0.11 262);
+}
+
+/* Neutral ink: a mid grey that follows the theme and never reaches the ends —
+   darker than the ground on a light page, lighter on a dark one, but neither
+   black nor white. Declared after the blue rules so it wins at equal weight. */
+.plane[data-tone="neutral"],
+.sheet[data-tone="neutral"] {
+  --bp-line: oklch(0.52 0 0);
+  --bp-grid: oklch(0.52 0 0 / 0.05);
+  --bp-grid-major: oklch(0.52 0 0 / 0.09);
+}
+:global(.dark) .plane[data-tone="neutral"],
+:global(.dark) .sheet[data-tone="neutral"] {
+  --bp-line: oklch(0.68 0 0);
+  --bp-grid: oklch(0.68 0 0 / 0.045);
+  --bp-grid-major: oklch(0.68 0 0 / 0.08);
+}
+
+.plane[data-wide] {
+  max-width: none;
+}
+
+.plane > svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+/* A hairline stays a hairline: the planes are drawn through a skewing matrix
+   and the whole drawing is scaled to its card, and neither should thicken or
+   shear a stroke. */
+.plane :is(path, rect, line, polyline, polygon) {
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+}
+
+/* A slab's faces: opaque ground, so the layer above hides what is under it. */
+.body {
+  fill: var(--bp-ground);
+  stroke: var(--bp-line);
+  stroke-width: 1;
+}
+
+.ink {
+  stroke: var(--bp-line);
+  stroke-width: 1;
+}
+
+.faint {
+  stroke: var(--bp-line);
+  stroke-width: 1;
+  stroke-opacity: 0.4;
+}
+
+/* The one filled thing on a plate — what the drawing is about. */
+.solid {
+  fill: var(--bp-line);
+  stroke: var(--bp-line);
+  stroke-width: 1;
+}
+
+.guide {
+  stroke: var(--bp-line);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  stroke-linecap: butt !important;
+}
+
+.glyph :is(path, rect, circle, line, polyline, polygon) {
+  stroke: var(--bp-line);
+  stroke-width: 1.15;
+}
+
+/* Callout labels, set flat on the page. */
+.label {
+  fill: var(--bp-line);
+  font: 500 9px var(--font-mono);
+  letter-spacing: 0.08em;
+}
+
+/* Type printed on a plate, sheared with it. */
+.stamp {
+  fill: var(--bp-line);
+  font: 500 6px var(--font-mono);
+  letter-spacing: 0.04em;
+}
+
+.knock {
+  fill: var(--bp-ground);
+  font: 600 6px var(--font-mono);
+}
+
+/* A figure printed on a plate — an amount, a count — in the display face. */
+.figure {
+  fill: var(--bp-line);
+  font: 500 16px var(--font-heading);
+  letter-spacing: -0.02em;
+}

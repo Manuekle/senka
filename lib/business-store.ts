@@ -35,6 +35,8 @@ import {
   type StoredDocumentId,
 } from "./doc-store";
 import { scopedDocumentId, scopedFile } from "./business-scope";
+import { emptyTeam, type TeamState } from "./team-types";
+import { captureTeamChanges, teamSnapshot } from "./team-changes";
 
 // Shared by the Eve agent (tools/hooks/schedules) and Next.js API routes.
 //
@@ -67,6 +69,7 @@ async function target(): Promise<{ id: StoredDocumentId; file: string }> {
 }
 
 type BusinessStore = {
+  team: TeamState;
   automations: Automation[];
   contacts: Contact[];
   deals: Deal[];
@@ -85,6 +88,7 @@ type BusinessStore = {
 
 function emptyStore(): BusinessStore {
   return {
+    team: emptyTeam(),
     automations: [],
     contacts: [],
     deals: [],
@@ -185,6 +189,7 @@ async function readFileStore(file: string): Promise<BusinessStore | null> {
 
 function normalize(parsed: Partial<BusinessStore>): BusinessStore {
   return {
+    team: { ...emptyTeam(), ...parsed.team },
     automations: parsed.automations ?? [],
     contacts: parsed.contacts ?? [],
     // Absent from every store written before deals existed, which is why it is
@@ -221,19 +226,40 @@ async function writeStore(file: string, store: BusinessStore): Promise<void> {
 
 async function updateStore<T>(fn: (store: BusinessStore) => T): Promise<T> {
   const where = await target();
+  const mutate = (store: BusinessStore): T => {
+    const before = store.team.enabled ? teamSnapshot(store) : null;
+    const result = fn(store);
+    if (before) captureTeamChanges(store.team, before, store);
+    return result;
+  };
   if (await usingDb(where)) {
     // No queue: the row lock inside the transaction is the serialisation, and
     // it holds across processes, which the in-process queue never did.
     // Normalized on the way in, so a mutator can push onto a collection the
     // stored document predates.
-    return dbUpdateDocument(where.id, (raw) => (raw ? normalize(raw) : emptyStore()), fn);
+    return dbUpdateDocument(where.id, (raw) => (raw ? normalize(raw) : emptyStore()), mutate);
   }
+  // A successful write to a fallback file would lose its collaboration event
+  // when PostgreSQL recovers. Reads may fall back; configured DB writes may not.
+  if (process.env.WORKFLOW_POSTGRES_URL) throw new Error("The workspace database is unavailable");
   return enqueue(async () => {
     const store = (await readFileStore(where.file)) ?? emptyStore();
-    const result = fn(store);
+    const result = mutate(store);
     await writeStore(where.file, store);
     return result;
   });
+}
+
+export async function readTeamState(): Promise<TeamState> {
+  return (await readStore()).team;
+}
+
+/** Paid/background work needs the same cross-process row lock as business writes. */
+export async function updateTeamState<T>(fn: (team: TeamState, agents: Agent[]) => T): Promise<T> {
+  if (!process.env.WORKFLOW_POSTGRES_URL) throw new Error("PostgreSQL is required for autonomous teams");
+  const where = await target();
+  if (!(await usingDb(where))) throw new Error("The workspace database is unavailable");
+  return dbUpdateDocument<BusinessStore, T>(where.id, (raw) => (raw ? normalize(raw) : emptyStore()), (store) => fn(store.team, store.agents));
 }
 
 function nowIso(): string {

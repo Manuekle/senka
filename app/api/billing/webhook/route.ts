@@ -1,8 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { apiError, withApiErrors } from "@/lib/api-error";
 import { getPlatformWebhookSecret, verifyStripeWebhookSignature } from "@/lib/stripe";
-import { updateBillingState, nextPeriodEnd } from "@/lib/billing-store";
+import { readBillingState, updateBillingState, nextPeriodEnd } from "@/lib/billing-store";
 import { isPlanId } from "@/lib/plans";
+import { expireWorkspaceCheckout, listWorkspacePurchases, subscriptionIdFrom, syncWorkspaceSubscription } from "@/lib/workspace-billing";
 
 // POST /api/billing/webhook — Stripe calls this, not a browser. Public in
 // middleware.ts (a webhook can't carry a session cookie); the signature
@@ -64,6 +65,27 @@ export const POST = withApiErrors(async function POST(request: NextRequest) {
     event = JSON.parse(rawBody) as StripeEvent;
   } catch {
     return apiError("invalid_json");
+  }
+
+  const object = event.data.object;
+  const metadata = object.metadata as Record<string, string> | undefined;
+  const subscriptionId = event.type.startsWith("customer.subscription.") && typeof object.id === "string"
+    ? object.id : subscriptionIdFrom(object);
+  const workspaceEvent = metadata?.kind === "workspace" || (subscriptionId &&
+    (await listWorkspacePurchases()).some((purchase) => purchase.subscriptionId === subscriptionId));
+  if (workspaceEvent) {
+    if (event.type === "checkout.session.expired" && metadata?.purchaseId && typeof object.id === "string") await expireWorkspaceCheckout(metadata.purchaseId, object.id);
+    if (subscriptionId) await syncWorkspaceSubscription(subscriptionId);
+    return NextResponse.json({ received: true });
+  }
+  // A workspace invoice can arrive before its checkout event. Never mirror an
+  // unrelated subscription onto the base plan, even if events arrive out of order.
+  if (event.type.startsWith("invoice.") || event.type.startsWith("customer.subscription.")) {
+    const billing = await readBillingState();
+    if (!subscriptionId || subscriptionId !== billing.stripeSubscriptionId) {
+      if (subscriptionId && process.env.WORKFLOW_POSTGRES_URL) await syncWorkspaceSubscription(subscriptionId);
+      return NextResponse.json({ received: true });
+    }
   }
 
   switch (event.type) {

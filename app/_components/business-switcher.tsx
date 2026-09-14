@@ -30,7 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { fetchJson, uiErrorMessage, type UiError } from "@/lib/api-error-message";
-import { useT } from "@/lib/i18n/provider";
+import { useI18n } from "@/lib/i18n/provider";
 import { cn } from "@/lib/utils";
 
 // Which business you are working on, at the top of the sidebar.
@@ -53,16 +53,32 @@ type Business = {
   readonly active: boolean;
   readonly primary: boolean;
   readonly logoUpdatedAt: string | null;
+  readonly access?: "active" | "suspended";
 };
 
 export function BusinessSwitcher({ collapsed = false, className }: { readonly collapsed?: boolean; readonly className?: string }) {
-  const t = useT();
+  const { t, locale } = useI18n();
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<UiError | null>(null);
+  const [price, setPrice] = useState<{ id: string; amount: number; currency: string } | null>(null);
+  const [priceLoading, setPriceLoading] = useState(false);
+  const [purchaseId, setPurchaseId] = useState("");
+
+  useEffect(() => {
+    if (!createOpen) return;
+    let cancelled = false;
+    void fetchJson<{ price: typeof price }>("/api/billing/workspaces?quote=1", t).then((result) => {
+      if (cancelled) return;
+      setPriceLoading(false);
+      if (result.ok) setPrice(result.data.price);
+      else setError(result.error);
+    });
+    return () => { cancelled = true; };
+  }, [createOpen, t]);
 
   const load = useCallback(async () => {
     const result = await fetchJson<{ businesses: Business[] }>("/api/businesses", t);
@@ -100,22 +116,21 @@ export function BusinessSwitcher({ collapsed = false, className }: { readonly co
   const create = async (event: FormEvent) => {
     event.preventDefault();
     const name = newName.trim();
-    if (!name || busy) return;
+    if (!name || busy || !price) return;
     setBusy(true);
-    const result = await fetchJson("/api/businesses", t, {
+    const result = await fetchJson<{ url: string }>("/api/billing/workspaces", t, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, requestId: purchaseId, priceId: price.id }),
     });
     if (!result.ok) {
       setBusy(false);
       setError(result.error);
       return;
     }
-    // A brand-new business has nothing in it: the setup page is the only
-    // screen that is useful on arrival, and it is where the agent's knowledge
-    // of this business starts.
-    window.location.href = "/setup";
+    // Checkout explains and collects the recurring charge. The signed webhook
+    // provisions access; returning from this browser flow does not.
+    window.location.href = result.data.url;
   };
 
   const trigger = (
@@ -186,6 +201,7 @@ export function BusinessSwitcher({ collapsed = false, className }: { readonly co
             {businesses.map((business) => (
               <CommandItem
                 key={business.id}
+                disabled={business.access === "suspended" || busy}
                 value={`${business.id} ${business.name}`}
                 onSelect={() => void switchTo(business.id)}
               >
@@ -223,6 +239,10 @@ export function BusinessSwitcher({ collapsed = false, className }: { readonly co
               onSelect={() => {
                 setPickerOpen(false);
                 setNewName("");
+                setPrice(null);
+                setPriceLoading(true);
+                setPurchaseId(crypto.randomUUID());
+                setError(null);
                 setCreateOpen(true);
               }}
             >
@@ -253,14 +273,19 @@ export function BusinessSwitcher({ collapsed = false, className }: { readonly co
               <span className="text-sm font-medium">{t("business.name")}</span>
               <Input
                 value={newName}
-                onChange={(event) => setNewName(event.target.value)}
+                onChange={(event) => { setNewName(event.target.value); setPurchaseId(crypto.randomUUID()); }}
                 placeholder={t("business.namePlaceholder")}
                 autoComplete="off"
                 data-1p-ignore="true"
                 required
+                maxLength={100}
+                disabled={busy}
               />
             </label>
             {error ? <p className="text-xs text-destructive">{uiErrorMessage(t, error)}</p> : null}
+            <p className="text-sm" role="status">{priceLoading ? t("workspace.priceLoading") : price
+              ? t("workspace.price", { amount: new Intl.NumberFormat(locale, { style: "currency", currency: price.currency }).format(price.amount) })
+              : t("workspace.notConfigured")}</p>
             <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
               <HugeiconsIcon
                 icon={Building06Icon}
@@ -276,8 +301,8 @@ export function BusinessSwitcher({ collapsed = false, className }: { readonly co
                   {t("common.cancel")}
                 </Button>
               </DialogClose>
-              <Button type="submit" disabled={!newName.trim() || busy}>
-                {busy ? t("business.creating") : t("business.createAction")}
+              <Button type="submit" disabled={!newName.trim() || busy || !price || priceLoading}>
+                {busy ? t("workspace.opening") : t("workspace.checkout")}
               </Button>
             </DialogFooter>
           </form>

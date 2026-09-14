@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   motion,
   useMotionTemplate,
@@ -10,24 +10,22 @@ import {
   useTransform,
 } from "motion/react";
 import { SenkaMark } from "@/components/icons/senka-mark";
-import { useTheme } from "@/components/theme-provider";
 import { SPRING_MOUSE } from "@/lib/ease";
 import { useHoverCapable } from "@/lib/hooks/use-hover-capable";
 import { useI18n } from "@/lib/i18n/provider";
 import type { LicenseInfo } from "@/lib/license/types";
 import { cn } from "@/lib/utils";
 
-// The Enterprise license, drawn as the card it is.
+// The Enterprise license, drawn as an identity card.
 //
-// Everything on the face is embossed rather than labelled: a wordmark, the
-// edition, the chip, the id as a card number, who it was issued to and when it
-// runs out. Nothing else. The status, the countdown and the maintenance date
-// are text under the card (license-card.tsx) — putting them on the face turned
-// a card into a dashboard.
+// The face carries a sigil and a name, both derived from the license id — so
+// two licenses never look alike and the same license always looks the same —
+// the holder, and a field of dots that thickens toward one corner, with a few
+// of the sigil's own shapes set into it. The edition and the validity sit in a
+// clearing at the foot of the field. The full ids are on the back.
 //
-// The card adapts to both light and dark themes: dark mode uses a deep charcoal
-// gradient, while light mode uses a warm off-white card stock. Text colors
-// invert accordingly.
+// One card stock in both themes: a neutral charcoal with light-grey ink.
+// Neither end of the scale — the card is never black and the ink never white.
 //
 // Nothing here gates anything — see lib/license/verify.ts. This is a picture
 // of a fact, not a check.
@@ -52,63 +50,43 @@ const SPRING_TILT = { stiffness: 260, damping: 22, mass: 0.5 } as const;
 const SPRING_FLIP = { type: "spring", stiffness: 220, damping: 26, mass: 0.7 } as const;
 const DRAG_RETURN = { bounceStiffness: 320, bounceDamping: 26 } as const;
 
-/** Dark-mode card body. Pure neutral, on the same greys as the app's dark surfaces
- *  (`--background` 0.155, `--card` 0.18, `--accent` 0.23 in app/globals.css). */
-const FACE_BACKGROUND_DARK =
-  "radial-gradient(115% 125% at 10% -15%, oklch(0.3 0 0) 0%, transparent 58%)," +
-  "linear-gradient(160deg, oklch(0.235 0 0) 0%, oklch(0.14 0 0) 55%, oklch(0.19 0 0) 100%)";
+/** The card stock. Flat, and the same in light and dark. */
+const CARD = "oklch(0.255 0 0)";
+/** The stripe on the back, one step down from the stock. */
+const STRIPE = "oklch(0.2 0 0)";
+const INK = "oklch(0.88 0 0)";
+const INK_MUTED = "oklch(0.88 0 0 / 0.55)";
+const EDGE = "oklch(1 0 0 / 0.08)";
 
-/** Light-mode card body. Warm off-white card stock with subtle depth. */
-const FACE_BACKGROUND_LIGHT =
-  "radial-gradient(115% 125% at 10% -15%, oklch(0.97 0 0) 0%, transparent 58%)," +
-  "linear-gradient(160deg, oklch(0.96 0 0) 0%, oklch(0.92 0 0) 55%, oklch(0.94 0 0) 100%)";
+/** Syllables for the card name, one per hex digit. */
+const PREFIX = ["dos", "ris", "bal", "mig", "sam", "lit", "wan", "pol", "fid", "nat", "tob", "sar", "hol", "rid", "lap", "mod"];
+const SUFFIX = ["zod", "nec", "bud", "wes", "sev", "per", "sut", "let", "ful", "pen", "syt", "dur", "wep", "ser", "wyl", "sun"];
 
-/** Guilloché: two hairline gratings crossing at a shallow angle, fine enough
- *  that they read as a milled surface rather than as stripes. */
-const FACE_ENGRAVING_DARK =
-  "repeating-linear-gradient(72deg, oklch(1 0 0 / 0.035) 0 1px, transparent 1px 7px)," +
-  "repeating-linear-gradient(-63deg, oklch(1 0 0 / 0.022) 0 1px, transparent 1px 11px)";
-
-const FACE_ENGRAVING_LIGHT =
-  "repeating-linear-gradient(72deg, oklch(0 0 0 / 0.04) 0 1px, transparent 1px 7px)," +
-  "repeating-linear-gradient(-63deg, oklch(0 0 0 / 0.025) 0 1px, transparent 1px 11px)";
-
-/** Chip contact pads, drawn rather than imported — it is eight rectangles, and
- *  it is the one thing on the face that says "card" without a word. */
-function Chip() {
-  return (
-    <svg viewBox="0 0 44 34" aria-hidden className="h-[22px] w-[29px]">
-      <defs>
-        <linearGradient id="license-chip" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="oklch(0.86 0 0)" />
-          <stop offset="42%" stopColor="oklch(0.72 0 0)" />
-          <stop offset="100%" stopColor="oklch(0.55 0 0)" />
-        </linearGradient>
-      </defs>
-      <rect x="0.5" y="0.5" width="43" height="33" rx="5" fill="url(#license-chip)" />
-      <g stroke="oklch(0.32 0 0 / 0.55)" strokeWidth="1.1" fill="none">
-        <path d="M0 11h13M31 11h13M0 23h13M31 23h13" />
-        <rect x="13" y="6" width="18" height="22" rx="3" />
-        <path d="M22 6v22" />
-      </g>
-    </svg>
-  );
+/** The id as 32 digits, 0 where it has none. The seed for everything drawn. */
+function digitsOf(licenseId: string | undefined): number[] {
+  const hex = (licenseId ?? "").replace(/[^0-9a-f]/gi, "").toLowerCase();
+  return Array.from({ length: 32 }, (_, index) => Number.parseInt(hex[index] ?? "0", 16) || 0);
 }
 
-/** UUID in, card number out: the first 16 hex digits in groups of four.
- *  A full UUID across a card face sets 32 characters in a line and stops
- *  looking like a number anyone could read back over the phone. The whole id
- *  is on the back, where there is room for it. */
-function cardNumber(licenseId: string | undefined): string {
-  if (!licenseId) return "•••• •••• •••• ••••";
-  const flat = licenseId.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 16).padEnd(16, "•");
-  return flat.replace(/(.{4})(?=.)/g, "$1 ");
+function nameOf(digits: readonly number[]): string {
+  return `~${PREFIX[digits[0]]}${SUFFIX[digits[1]]}-${PREFIX[digits[2]]}${SUFFIX[digits[3]]}`;
 }
 
-/** MM/YY, the way it is embossed on a card. `Intl` will not be pinned to two
+/** A small deterministic generator, so the server and the client draw the same field. */
+function generator(digits: readonly number[]): () => number {
+  let state = digits.reduce((acc, digit, index) => (Math.imul(acc, 31) + digit + index) >>> 0, 2166136261);
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let value = state;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** MM/YY, the way it is printed on a card. `Intl` will not be pinned to two
  *  digits here — `{ month: "2-digit", year: "2-digit" }` still resolves to a
- *  bare "2/27" in es-AR — and a card that reads 2/27 in one locale and 02/27
- *  in another is not a card, it is a date field. */
+ *  bare "2/27" in es-AR. */
 function monthYear(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "––/––";
@@ -116,20 +94,169 @@ function monthYear(iso: string): string {
   return `${month}/${String(date.getFullYear()).slice(-2)}`;
 }
 
+/** One of the eight shapes the sigil and the field are built from, in a 20-unit cell. */
+function shape(kind: number): ReactNode {
+  switch (kind % 8) {
+    case 0:
+      return <path d="M0 0H20A20 20 0 0 1 0 20Z" />;
+    case 1:
+      return <path d="M0 10A10 10 0 0 1 20 10V20H0Z" />;
+    case 2:
+      return <circle cx="10" cy="10" r="9" />;
+    case 3:
+      return (
+        <>
+          <rect height="20" width="20" />
+          <circle cx="10" cy="10" fill={CARD} r="3.2" />
+        </>
+      );
+    case 4:
+      return <path d="M0 0H20V20Z" />;
+    case 5:
+      return (
+        <>
+          <circle cx="10" cy="10" fill="none" r="8.25" stroke="currentColor" strokeWidth="1.5" />
+          <circle cx="10" cy="10" r="2" />
+        </>
+      );
+    case 6:
+      return (
+        <>
+          <circle cx="5" cy="5" r="2.2" />
+          <circle cx="15" cy="5" r="2.2" />
+          <circle cx="5" cy="15" r="2.2" />
+          <circle cx="15" cy="15" r="2.2" />
+        </>
+      );
+    default:
+      return <path d="M0 20A20 20 0 0 1 20 0A20 20 0 0 1 0 20Z" />;
+  }
+}
+
+function Tile({ kind, turn, x, y, scale = 1 }: { kind: number; turn: number; x: number; y: number; scale?: number }) {
+  return (
+    <g fill="currentColor" transform={`translate(${x} ${y}) scale(${scale}) rotate(${turn * 90} 10 10)`}>
+      {shape(kind)}
+    </g>
+  );
+}
+
+/** Four tiles, two by two. Without a license, four empty frames. */
+function Sigil({ className, digits, empty }: { className?: string; digits: readonly number[]; empty: boolean }) {
+  const cells = [
+    [0, 0],
+    [20, 0],
+    [0, 20],
+    [20, 20],
+  ] as const;
+  return (
+    <svg aria-hidden className={className} viewBox="0 0 40 40">
+      {cells.map(([x, y], index) =>
+        empty ? (
+          <rect
+            fill="none"
+            height="18"
+            key={index}
+            stroke="currentColor"
+            strokeOpacity="0.35"
+            strokeWidth="1"
+            width="18"
+            x={x + 1}
+            y={y + 1}
+          />
+        ) : (
+          <Tile key={index} kind={digits[4 + index]} turn={digits[8 + index]} x={x} y={y} />
+        ),
+      )}
+    </svg>
+  );
+}
+
+const FIELD_COLUMNS = 36;
+const FIELD_ROWS = 12;
+
+/**
+ * The dot field. Every cell has a dot; the dots grow and brighten toward the
+ * bottom right, and a handful of cells there hold a small tile instead. It
+ * fills the height it is given and crops at the sides, so a narrow card shows
+ * less of the field rather than a smaller one.
+ */
+function DotField({ digits, empty }: { digits: readonly number[]; empty: boolean }) {
+  const { dots, tiles } = useMemo(() => {
+    const random = generator(digits);
+    const taken = new Set<string>();
+    const tiles: { column: number; kind: number; row: number; turn: number }[] = [];
+    if (!empty) {
+      for (let index = 0; index < 9; index++) {
+        const column = 14 + Math.floor(random() * (FIELD_COLUMNS - 14));
+        const row = 2 + Math.floor(random() * (FIELD_ROWS - 2));
+        if (taken.has(`${column}-${row}`)) continue;
+        taken.add(`${column}-${row}`);
+        tiles.push({ column, kind: Math.floor(random() * 8), row, turn: Math.floor(random() * 4) });
+      }
+    }
+    const dots: { alpha: number; column: number; radius: number; row: number }[] = [];
+    for (let row = 0; row < FIELD_ROWS; row++) {
+      for (let column = 0; column < FIELD_COLUMNS; column++) {
+        if (taken.has(`${column}-${row}`)) continue;
+        const weight = (column / (FIELD_COLUMNS - 1)) * 0.65 + (row / (FIELD_ROWS - 1)) * 0.35;
+        const roll = random();
+        const radius = empty ? 0.8 : roll < weight * weight * 0.35 ? 2.4 : roll < weight * 0.5 ? 1.5 : 0.8;
+        dots.push({ alpha: (0.14 + 0.6 * weight) * (empty ? 0.45 : 1), column, radius, row });
+      }
+    }
+    return { dots, tiles };
+  }, [digits, empty]);
+
+  return (
+    <svg
+      aria-hidden
+      className="block w-full"
+      preserveAspectRatio="xMidYMax meet"
+      viewBox={`0 0 ${FIELD_COLUMNS * 10} ${FIELD_ROWS * 10}`}
+    >
+      <g fill="currentColor">
+        {dots.map((dot) => (
+          <circle
+            cx={dot.column * 10 + 5}
+            cy={dot.row * 10 + 5}
+            fillOpacity={dot.alpha}
+            key={`${dot.column}-${dot.row}`}
+            r={dot.radius}
+          />
+        ))}
+      </g>
+      {tiles.map((tile) => (
+        <Tile
+          key={`${tile.column}-${tile.row}`}
+          kind={tile.kind}
+          scale={0.45}
+          turn={tile.turn}
+          x={tile.column * 10 + 0.5}
+          y={tile.row * 10 + 0.5}
+        />
+      ))}
+    </svg>
+  );
+}
+
 export function LicenseCreditCard({
   info,
   installationId,
   className,
+  flipOnly = false,
 }: {
   readonly info: LicenseInfo | null;
   readonly installationId: string | null;
   readonly className?: string;
+  /**
+   * The card turns over and does nothing else: no drag, no lean under the
+   * pointer. For a page where the card is a picture of the licence, not the
+   * licence in your hand — the landing, where a drag would fight the scroll.
+   */
+  readonly flipOnly?: boolean;
 }) {
   const { t } = useI18n();
-  const { theme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  const isDark = mounted && theme === "dark";
   const reduce = useReducedMotion();
   const canHover = useHoverCapable();
   const node = useRef<HTMLDivElement>(null);
@@ -139,7 +266,11 @@ export function LicenseCreditCard({
   const dragging = useRef(false);
 
   const payload = info?.payload ?? null;
-  const interactive = !reduce;
+  // Drag and tilt. The flip is separate and survives both switches.
+  const interactive = !reduce && !flipOnly;
+  const licenseId = payload?.licenseId;
+  const digits = useMemo(() => digitsOf(licenseId), [licenseId]);
+  const empty = !payload;
 
   // ── Physics ──
   // x/y are the drag offset; hoverX/hoverY are the pointer's position inside
@@ -172,7 +303,7 @@ export function LicenseCreditCard({
   // flip left a flat rectangle hanging in the air behind the moving card.
   const shadowX = useTransform(rotateY, [-MAX_TILT, MAX_TILT], [18, -18]);
   const shadowY = useTransform(rotateX, [-MAX_TILT, MAX_TILT], [8, 28]);
-  const boxShadow = useMotionTemplate`${shadowX}px ${shadowY}px 40px -18px oklch(0 0 0 / 0.5), 0 2px 5px oklch(0 0 0 / 0.2)`;
+  const boxShadow = useMotionTemplate`${shadowX}px ${shadowY}px 40px -18px oklch(0 0 0 / 0.45), 0 2px 5px oklch(0 0 0 / 0.16)`;
 
   const onPointerMove = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
@@ -190,36 +321,14 @@ export function LicenseCreditCard({
     hoverY.set(0);
   }, [hoverX, hoverY]);
 
-  /** Both faces share the surface: gradient, milling, the bevel hairline along
-   *  the top edge, and the inset ring. Nothing on it moves — the roaming
-   *  radial highlight that used to ride the tilt read as a spotlight sweeping
-   *  the card rather than as a card catching the light. */
-  const faceBg = isDark ? FACE_BACKGROUND_DARK : FACE_BACKGROUND_LIGHT;
-  const engraving = isDark ? FACE_ENGRAVING_DARK : FACE_ENGRAVING_LIGHT;
-  const textPrimary = isDark ? "text-white" : "text-neutral-900";
-  const textMuted = isDark ? "text-white/40" : "text-neutral-500";
-  const textSubtle = isDark ? "text-white/45" : "text-neutral-600";
-  const textBody = isDark ? "text-white/90" : "text-neutral-800";
-  const textSoft = isDark ? "text-white/85" : "text-neutral-700";
-  const textFaint = isDark ? "text-white/70" : "text-neutral-600";
-  const iconGhost = isDark ? "text-white/25" : "text-neutral-400";
-  const face = cn(
-    "absolute inset-0 overflow-hidden rounded-[14px] [backface-visibility:hidden]",
-    textPrimary,
+  const face = "absolute inset-0 overflow-hidden rounded-[14px] [backface-visibility:hidden]";
+  const edge = (
+    <div
+      className="pointer-events-none absolute inset-0 rounded-[14px]"
+      style={{ boxShadow: `inset 0 0 0 1px ${EDGE}` }}
+    />
   );
-  const surface = (
-    <>
-      <div className="pointer-events-none absolute inset-0" style={{ background: engraving }} />
-      <div className={cn(
-        "pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent to-transparent",
-        isDark ? "via-white/30" : "via-black/20",
-      )} />
-      <div className={cn(
-        "pointer-events-none absolute inset-0 rounded-[14px] ring-1 ring-inset",
-        isDark ? "ring-white/10" : "ring-black/10",
-      )} />
-    </>
-  );
+  const surface = { background: CARD, boxShadow, color: INK } as const;
 
   return (
     <div className={cn("select-none", className)}>
@@ -257,8 +366,10 @@ export function LicenseCreditCard({
           }}
           style={{ x, y, rotateX, rotateY, rotateZ, transformStyle: "preserve-3d" }}
           className={cn(
-            "relative mx-auto aspect-[1.586] w-full max-w-[23rem] touch-none",
-            interactive ? "cursor-grab" : "cursor-pointer",
+            "relative mx-auto aspect-[1.586] w-full max-w-[23rem]",
+            // `touch-none` only while the card can be dragged: on a flip-only
+            // card it would swallow the swipe that scrolls the page.
+            interactive ? "cursor-grab touch-none" : "cursor-pointer",
           )}
         >
           <motion.div
@@ -268,89 +379,69 @@ export function LicenseCreditCard({
             className="absolute inset-0"
           >
             {/* ── Front ── */}
-            <motion.div style={{ background: faceBg, boxShadow }} className={face}>
-              {surface}
+            <motion.div style={surface} className={face}>
+              {edge}
 
-              <div className="relative flex h-full flex-col justify-between p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="flex items-center gap-2">
-                    {/* Milled, like the header and the sidebar. The face is
-                        the app's own polarity — dark card in dark, light card
-                        in light — so it takes the page-ground ramp, and a flat
-                        mark was the one thing on a guilloché card that did not
-                        catch the light. The ghost on the back stays flat: it
-                        is a watermark, and a watermark that glints is a logo. */}
-                    <SenkaMark className="h-[18px] w-auto" metal />
-                    <span className={cn("font-heading text-[14px] leading-none font-semibold tracking-tight", textPrimary)}>
-                      senka
-                    </span>
-                  </span>
-                  <p className={cn("truncate text-[11px]", textSubtle)}>
-                    {payload?.edition ?? t("license.card.noHolder")}
-                  </p>
-                </div>
-
-                <Chip />
-
-                <p className={cn("font-mono text-[15px] tracking-[0.16em] tabular-nums", textBody)}>
-                  {cardNumber(payload?.licenseId)}
-                </p>
-
-                <div className="flex items-end justify-between gap-4">
-                  <div className="min-w-0">
-                    <p className={cn("text-[9px]", textMuted)}>{t("license.card.holder")}</p>
-                    <p className={cn("mt-1 truncate text-[12px] tracking-wide", textBody)}>
+              <div className="relative flex h-full flex-col">
+                <div className="flex items-start gap-3 px-5 pt-5">
+                  <Sigil className="size-10 shrink-0" digits={digits} empty={empty} />
+                  <div className="min-w-0 flex-1 pt-0.5">
+                    <p className="truncate font-mono text-[14px] leading-tight tracking-[0.01em]">
+                      {empty ? t("license.card.noHolder") : nameOf(digits)}
+                    </p>
+                    <p className="mt-1.5 truncate font-mono text-[10.5px]" style={{ color: INK_MUTED }}>
                       {payload?.company ?? "—"}
                     </p>
                   </div>
-                  <div className="shrink-0 text-right">
-                    <p className={cn("text-[9px]", textMuted)}>{t("license.card.validThru")}</p>
-                    <p className={cn("mt-1 font-mono text-[12px] tabular-nums", textBody)}>
-                      {payload ? monthYear(payload.maintenanceUntil) : "––/––"}
-                    </p>
-                  </div>
+                  <SenkaMark className="mt-0.5 h-[13px] w-auto shrink-0 opacity-50" />
                 </div>
+
+                {/* The field takes whatever height the header and the footer
+                    line leave, and crops at the sides rather than pushing the
+                    line off the card on a narrow one. */}
+                <div className="min-h-0 flex-1 overflow-hidden px-3 pt-2">
+                  <DotField digits={digits} empty={empty} />
+                </div>
+
+                <p
+                  className="truncate px-5 pt-1.5 pb-4 font-mono text-[9.5px] uppercase tracking-[0.08em] tabular-nums"
+                  style={{ color: INK_MUTED }}
+                >
+                  {payload?.edition ?? "—"} · {t("license.card.validThru")}{" "}
+                  {payload ? monthYear(payload.maintenanceUntil) : "––/––"}
+                </p>
               </div>
             </motion.div>
 
             {/* ── Back ── */}
-            <motion.div
-              style={{ background: faceBg, boxShadow }}
-              className={cn(face, "[transform:rotateY(180deg)]")}
-            >
-              {surface}
+            <motion.div style={surface} className={cn(face, "[transform:rotateY(180deg)]")}>
+              {edge}
 
               <div className="relative flex h-full flex-col">
-                <div className={cn(
-                  "mt-5 h-9 w-full shadow-[inset_0_1px_0_oklch(1_0_0/0.06)]",
-                  isDark
-                    ? "bg-gradient-to-b from-black/85 via-black/95 to-black/80"
-                    : "bg-gradient-to-b from-neutral-800/90 via-neutral-900/95 to-neutral-800/90",
-                )} />
+                <div className="mt-5 h-8 w-full" style={{ background: STRIPE }} />
 
                 <div className="flex min-h-0 flex-1 flex-col justify-center gap-3.5 px-5">
                   {/* Reference only. Copying the installation id happens where
                       it is actually needed — inside "replace this license", next
                       to the box you paste the new token into. */}
                   <div>
-                    <p className={cn("text-[9px]", textMuted)}>
+                    <p className="text-[9px]" style={{ color: INK_MUTED }}>
                       {t("settings.license.installationIdLabel")}
                     </p>
-                    <p className={cn("mt-1 font-mono text-[11px] break-all", textSoft)}>
-                      {installationId ?? "…"}
-                    </p>
+                    <p className="mt-1 break-all font-mono text-[11px]">{installationId ?? "…"}</p>
                   </div>
 
                   <div>
-                    <p className={cn("text-[9px]", textMuted)}>{t("license.card.licenseId")}</p>
-                    <p className={cn("mt-1 font-mono text-[11px] break-all", textFaint)}>
-                      {payload?.licenseId ?? "—"}
+                    <p className="text-[9px]" style={{ color: INK_MUTED }}>
+                      {t("license.card.licenseId")}
                     </p>
+                    <p className="mt-1 break-all font-mono text-[11px]">{payload?.licenseId ?? "—"}</p>
                   </div>
                 </div>
 
-                <div className="flex justify-end px-5 pb-5">
-                  <SenkaMark className={cn("h-[15px] w-auto", iconGhost)} />
+                <div className="flex items-end justify-between px-5 pb-5" style={{ color: INK_MUTED }}>
+                  <Sigil className="size-5" digits={digits} empty={empty} />
+                  <SenkaMark className="h-[13px] w-auto" />
                 </div>
               </div>
             </motion.div>

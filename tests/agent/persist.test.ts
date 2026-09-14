@@ -8,6 +8,8 @@ const db = vi.hoisted(() => ({
 }));
 
 vi.mock("eve/hooks", () => ({ defineHook: (hook: unknown) => hook }));
+// Workspace lifecycle is covered independently; these tests isolate transcript writes.
+vi.mock("../../agent/lib/workspace", () => ({ bindSessionWorkspace: vi.fn() }));
 vi.mock("@/lib/business-scope", () => ({
   scopedDocumentId: async (id: string) => id,
   scopedFile: async (file: string) => file,

@@ -2,6 +2,7 @@ import { join } from "node:path";
 import { homedir } from "node:os";
 import { basename, dirname } from "node:path";
 import { createDocumentStore } from "./doc-store";
+import { currentWorkspace } from "./workspace-context";
 
 // More than one business on one installation.
 //
@@ -12,24 +13,19 @@ import { createDocumentStore } from "./doc-store";
 //
 // The model is deliberately small:
 //
-//   - A registry of businesses, and which one is active. Install-wide, not
-//     per browser session — the Eve runtime answers WhatsApp in a process
-//     with no session at all, and it has to work for the same business the
-//     owner is looking at. One active business per installation is also the
-//     honest model for a single WhatsApp number.
+//   - A registry with a legacy default for inbound channels. API requests,
+//     durable Eve sessions and background teams pin an explicit workspace.
+//     Browser switching sets a cookie, not the legacy default.
 //   - Every business-owned store is keyed by the active business. The first
 //     business keeps the unsuffixed keys and the original file paths, so an
 //     install that has been running since before any of this keeps its data
 //     exactly where it was, with no migration step.
 //
-// The consequence to be honest about: everything that arrives from outside —
-// Meta's webhooks, an automation's webhook URL, a payment provider's callback
-// — lands in whichever business is active, because none of them carry a
-// session either. Two businesses that each need their own inbound number
-// answered at the same time are still two installations.
+// Legacy inbound integrations without an explicit business binding still use
+// registry.activeId. That routing is independent of the browser's selection.
 //
 // What is NOT per business, on purpose: the account and its password, the
-// provider keys, the connected accounts, the plan and its credits. Those are
+// provider keys, the connected accounts, the base plan and its credits. Those are
 // the installation's, and asking someone to connect the same OpenAI key twice
 // because they opened a second shop would be user-hostile.
 
@@ -41,6 +37,8 @@ export type BusinessEntry = {
    *  backfilled from the business profile — see the /api/businesses route. */
   readonly name: string;
   readonly createdAt: string;
+  readonly purchaseId?: string;
+  readonly access?: "active" | "suspended";
 };
 
 type Registry = {
@@ -90,6 +88,8 @@ let cached: { id: string; at: number } | null = null;
 const CACHE_MS = 1_000;
 
 export async function activeBusinessId(): Promise<string> {
+  const pinned = currentWorkspace();
+  if (pinned) return pinned;
   if (cached && Date.now() - cached.at < CACHE_MS) return cached.id;
   try {
     const registry = await registryStore.read();
@@ -112,23 +112,36 @@ export async function listBusinesses(): Promise<{
   readonly activeId: string;
 }> {
   const registry = await registryStore.read();
-  return { businesses: registry.businesses, activeId: registry.activeId };
+  return { businesses: registry.businesses, activeId: currentWorkspace() ?? registry.activeId };
 }
 
-export async function createBusiness(name: string): Promise<BusinessEntry> {
+export async function createBusiness(name: string, paid?: { id: string; purchaseId: string }): Promise<BusinessEntry> {
   const entry: BusinessEntry = {
-    id: `b-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    id: paid?.id ?? `b-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
     name: name.trim(),
     createdAt: new Date().toISOString(),
+    ...(paid ? { purchaseId: paid.purchaseId, access: "active" as const } : {}),
   };
   await registryStore.update((registry) => {
+    if (registry.businesses.some((business) => business.id === entry.id)) return;
     registry.businesses = [...registry.businesses, entry];
     // Creating a business and then having to go and switch to it is one step
     // too many: the point of creating it is to work on it.
-    registry.activeId = entry.id;
+    if (!paid) registry.activeId = entry.id;
   });
   invalidateActiveBusiness();
   return entry;
+}
+
+export async function setBusinessAccess(id: string, access: "active" | "suspended"): Promise<void> {
+  if (!(await registryStore.usingDatabase())) throw new Error("PostgreSQL is required for workspace billing");
+  await registryStore.update((registry) => {
+    registry.businesses = registry.businesses.map((entry) => entry.id === id ? { ...entry, access } : entry);
+  });
+}
+
+export async function requireBusinessDatabase(): Promise<void> {
+  if (!(await registryStore.usingDatabase())) throw new Error("PostgreSQL is required for workspace billing");
 }
 
 export async function renameBusiness(id: string, name: string): Promise<boolean> {
@@ -144,7 +157,7 @@ export async function renameBusiness(id: string, name: string): Promise<boolean>
 
 export async function setActiveBusiness(id: string): Promise<boolean> {
   const ok = await registryStore.update((registry) => {
-    if (!registry.businesses.some((business) => business.id === id)) return false;
+    if (!registry.businesses.some((business) => business.id === id && business.access !== "suspended")) return false;
     registry.activeId = id;
     return true;
   });
@@ -165,6 +178,8 @@ export async function forgetBusiness(id: string): Promise<boolean> {
   const ok = await registryStore.update((registry) => {
     if (registry.businesses.length <= 1) return false;
     if (registry.activeId === id) return false;
+    // Paid workspaces are cancelled through billing; hiding one must not keep charging.
+    if (registry.businesses.find((entry) => entry.id === id)?.purchaseId) return false;
     const before = registry.businesses.length;
     registry.businesses = registry.businesses.filter((business) => business.id !== id);
     return registry.businesses.length < before;

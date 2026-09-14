@@ -1,26 +1,22 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { apiError, missingField, withApiErrors } from "@/lib/api-error";
 import {
-  createBusiness,
   forgetBusiness,
   listBusinesses,
   renameBusiness,
-  setActiveBusiness,
   DEFAULT_BUSINESS_ID,
   type BusinessEntry,
 } from "@/lib/business-scope";
 import { getBusinessIdentityById, getBusinessProfile } from "@/lib/business-profile-store";
+import { WORKSPACE_COOKIE } from "@/lib/workspace-context";
 
 // GET    /api/businesses — every business on this installation, and the active one
-// POST   /api/businesses — { name } create one and switch to it
+// POST   /api/businesses — refuses free creation; use /api/billing/workspaces
 // PUT    /api/businesses — { id, name? , active? } rename and/or switch
 // DELETE /api/businesses?id= — forget one (its documents are kept)
 //
-// The active business is a property of the installation, not of the browser
-// session, and that is the whole design. The Eve runtime answers WhatsApp in a
-// process that has no cookie to read; if "which business" lived in a session,
-// the agent would keep answering for the previous one while the owner looked
-// at the new one. One number, one inbox, one active business.
+// Browser selection is a cookie, pinned by withApiErrors for this request.
+// It never changes the installation's legacy inbound-channel destination.
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +47,8 @@ export const GET = withApiErrors(async function GET() {
         /** The original business keeps every unsuffixed key and file, which is
          *  worth saying out loud in the one place that could offer to delete it. */
         primary: entry.id === DEFAULT_BUSINESS_ID,
+        purchaseId: entry.purchaseId,
+        access: entry.access ?? "active",
         logoUpdatedAt: identity.logo?.updatedAt ?? null,
       };
     }),
@@ -69,8 +67,7 @@ export const POST = withApiErrors(async function POST(request: NextRequest) {
   const name = typeof input?.name === "string" ? input.name.trim() : "";
   if (!name) return missingField("name");
 
-  const entry = await createBusiness(name);
-  return NextResponse.json({ business: entry, activeId: entry.id });
+  return apiError("workspace_payment_required");
 });
 
 export const PUT = withApiErrors(async function PUT(request: NextRequest) {
@@ -89,8 +86,13 @@ export const PUT = withApiErrors(async function PUT(request: NextRequest) {
     if (!renamed) return apiError("not_found");
   }
   if (input?.active === true) {
-    const switched = await setActiveBusiness(id);
-    if (!switched) return apiError("not_found");
+    const { businesses } = await listBusinesses();
+    const selected = businesses.find((business) => business.id === id);
+    if (!selected) return apiError("not_found");
+    if (selected.access === "suspended") return apiError("workspace_unavailable");
+    const response = NextResponse.json({ businesses, activeId: id });
+    response.cookies.set(WORKSPACE_COOKIE, id, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 365 * 86400 });
+    return response;
   }
 
   const { businesses, activeId } = await listBusinesses();

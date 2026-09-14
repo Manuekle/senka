@@ -28,6 +28,7 @@ import { StackPanel } from "./_components/stack-panel";
 import { LoadedPanel } from "./_components/loaded-panel";
 import { LogStream } from "./_components/log-stream";
 import { PlanList } from "./_components/plan-list";
+import { TeamPanel } from "./_components/team-panel";
 
 // The runtime, seen from outside.
 //
@@ -61,7 +62,7 @@ export default function RuntimePage() {
   const { toast } = useToast();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
-  const [tab, setTab] = useState<"logs" | "steps" | "loaded">("logs");
+  const [tab, setTab] = useState<"team" | "logs" | "steps" | "loaded">("team");
   const [stack, setStack] = useState<StackReport | null>(null);
   const [info, setInfo] = useState<EveInfoResult | null>(null);
   const [logs, setLogs] = useState<RuntimeLogEntry[]>([]);
@@ -169,6 +170,7 @@ export default function RuntimePage() {
 
   const tabs = useMemo(
     () => [
+      { id: "team", label: t("agentTeam.title") },
       { id: "logs", label: `${t("runtime.tabLogs")}${logs.length ? ` (${logs.length})` : ""}` },
       { id: "steps", label: `${t("runtime.tabSteps")}${plans.length ? ` (${plans.length})` : ""}` },
       { id: "loaded", label: t("runtime.tabLoaded") },
@@ -291,6 +293,7 @@ export default function RuntimePage() {
           ) : null}
 
           {tab === "loaded" ? <LoadedPanel result={info} isLoading={isLoading} /> : null}
+          {tab === "team" ? <TeamPanel /> : null}
         </div>
       </div>
       {confirmDialog}

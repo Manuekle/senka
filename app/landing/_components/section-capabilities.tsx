@@ -1,10 +1,10 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
-import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { useSession } from "@/lib/auth/use-session";
 import { useT } from "@/lib/i18n/provider";
+import blueprint from "./blueprint.module.css";
 import { CAPABILITY_ART } from "./capability-art";
 import { Reveal, SectionIntro, Shell } from "./primitives";
 
@@ -19,9 +19,9 @@ import { Reveal, SectionIntro, Shell } from "./primitives";
  * templates, the voice agents and the payment links had all shipped without
  * the page ever mentioning them.
  *
- * This is the other move: a grid where each cell is one capability, an
- * animated drawing of the mechanism, and two lines. Twelve features in one
- * screen's worth of page instead of twelve sections.
+ * This is the other move: a grid where each cell is one capability, a drawing
+ * of the mechanism, and two lines. Twelve features in one screen's worth of
+ * page instead of twelve sections.
  *
  * A card is a way into the page it describes — but only for someone who has
  * one. Every `href` here is a gated route, so for a visitor who has never
@@ -44,43 +44,18 @@ type Capability = {
   readonly id: string;
   /** The page it belongs to, so a card is a way in and not just a claim. */
   readonly href: string;
-  /** How many of the three columns the card takes. `2` is the bento's wide
-   *  card; `3` is the full-width one that closes the grid. Absent is one. */
-  readonly span?: 2 | 3;
+  /** How many of the three columns the card takes. Absent is one. */
+  readonly span?: 2;
 };
 
 /**
- * Six, in an asymmetric bento.
+ * Six, in an asymmetric bento: three rows of one wide card and one narrow one,
+ * the wide card changing sides on each row. Everything else is named in one
+ * line under the grid.
  *
- * There were fifteen, then nine, and nine was still a catalogue. The count
- * that matters is not how many capabilities exist, it is how many cards a
- * reader will actually read before they start scrolling past them — and nine
- * cards over five rows is about twice that. Worse, it is nine cards each with
- * a built scene in it: the section became the longest thing on the page while
- * making the least specific claim on it.
- *
- * These six answer "can it actually run my front desk". Everything else is
- * named in one line under the grid, which is what a reader scanning for a
- * particular word needs and is not a card each.
- *
- * The asymmetry is in the width, not the height. Spanning rows was tried and
- * it does not survive copy that runs from two lines to four: the grid resolves
- * its rows against the tallest card in each, and three columns end at three
- * heights with holes in them. Spanning *columns* cannot come apart — every
- * card in a row is still one row tall — and it gives the same broken-up
- * rhythm, which is what a bento is for.
- *
- * Each row is one wide card and one narrow one, and the side the wide one sits
- * on alternates. Four rows of `[2,1]` would be a layout with a margin down the
- * right; alternating is what makes it read as a bento rather than as a table
- * with a wide first column.
+ * The order is fixed. The cards used to trade places every few seconds; a
+ * drawing that moves while you read it is a drawing you stop reading.
  */
-/* Three rows of two, and the wide card changes sides on each. It also means
-   the grid closes on its own: the full-width `api` card existed to fill the
-   hole a ninth card left in a four-row bento, and with six there is no hole
-   for it to fill. `crm`, `prospect` and `api` moved to the line underneath —
-   all three are claims a reader either already assumed or will go to `/guide`
-   for, which is exactly the test for whether something needs a card. */
 const CAPABILITIES: readonly Capability[] = [
   { id: "knowledge", href: "/knowledge", span: 2 },
   { id: "handoff", href: "/inbox" },
@@ -93,186 +68,48 @@ const CAPABILITIES: readonly Capability[] = [
 ];
 
 /**
- * The grid deals itself again every few seconds.
+ * The card: one cell of the drawing sheet.
  *
- * Cards trade places rather than the grid re-sorting: one pair moves at a
- * time, everything else holds still. A whole grid rearranging at once is a
- * page reloading in front of you — two cards swapping is the section saying
- * these are nine of the same kind of thing, in no particular order.
+ * Square, and edged by the sheet's own rules rather than a border of its own —
+ * each cell draws its right and bottom edge and the grid draws the top and
+ * left, so two cells share one line instead of stacking two.
  *
- * Two rules keep it from turning into churn:
- *
- * A card only ever swaps with one of the same width. The bento's shape — wide,
- * narrow, alternating sides — is the layout, not a property of any card in it;
- * dropping a two-column card into a one-column slot would reflow every row
- * under it. Same span in, same span out, so the grid geometry never changes
- * and the move is a straight translation.
- *
- * And it stops the moment anyone might be reading: on hover or focus inside
- * the grid, off screen, on a background tab, on a narrow viewport where the
- * bento is not the layout anyway, and for `prefers-reduced-motion`. Same
- * bargain as the testimonial wall — the motion is what makes you look, and
- * stopping is what lets you read.
- */
-
-/** How long a card sits in a slot before the next deal. */
-const SHUFFLE_MS = 4600;
-
-/** Long enough to follow a card across the grid, short enough not to wait. */
-const SHUFFLE_TRANSITION = { duration: 0.62, ease: [0.22, 1, 0.36, 1] } as const;
-
-/** The lg-only span class for a card, keyed by how many columns it takes. */
-const SPAN_CLASS: Record<number, string | undefined> = {
-  1: undefined,
-  2: "lg:col-span-2",
-  3: "lg:col-span-3",
-};
-
-/**
- * Slots grouped by width — the sets within which two cards may trade places.
- * The full-width card is alone in its group, so it never moves; it is the one
- * that closes the grid and it closes it wherever the rest end up.
- */
-const SWAP_GROUPS: readonly (readonly number[])[] = (() => {
-  const bySpan = new Map<number, number[]>();
-  CAPABILITIES.forEach((capability, slot) => {
-    const span = capability.span ?? 1;
-    const group = bySpan.get(span) ?? [];
-    group.push(slot);
-    bySpan.set(span, group);
-  });
-  return [...bySpan.values()].filter((group) => group.length > 1);
-})();
-
-/** `order[slot]` is the index in `CAPABILITIES` of the card sitting there. */
-type Order = readonly number[];
-
-const INITIAL_ORDER: Order = CAPABILITIES.map((_, index) => index);
-
-/** One swap: a random pair out of one random group of same-width slots. */
-function deal(order: Order): Order {
-  const group = SWAP_GROUPS[Math.floor(Math.random() * SWAP_GROUPS.length)];
-  if (!group) return order;
-
-  const first = Math.floor(Math.random() * group.length);
-  // Anything but `first`, without a retry loop that can in principle spin.
-  const second = (first + 1 + Math.floor(Math.random() * (group.length - 1))) % group.length;
-
-  const next = [...order];
-  const a = group[first];
-  const b = group[second];
-  next[a] = order[b];
-  next[b] = order[a];
-  return next;
-}
-
-/**
- * Runs the deal, and only while it is worth running: the bento layout is on,
- * the grid is on screen, the tab is in front, and nobody is reading it.
- */
-function useShuffledOrder(grid: RefObject<HTMLDivElement | null>, paused: boolean): Order {
-  const reduced = useReducedMotion();
-  const [order, setOrder] = useState<Order>(INITIAL_ORDER);
-  const [live, setLive] = useState(false);
-
-  useEffect(() => {
-    const node = grid.current;
-    if (!node) return;
-
-    // The span classes are `lg:`, so below that the grid is a plain two-column
-    // flow and a swap would move a card for no visible reason.
-    const bento = window.matchMedia("(min-width: 1024px)");
-    let onScreen = false;
-    const sync = () => setLive(bento.matches && onScreen && !document.hidden);
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        onScreen = entry?.isIntersecting ?? false;
-        sync();
-      },
-      // Any sliver of the grid counts: it is taller than most viewports, so a
-      // threshold would switch it off while the reader is halfway down it.
-      { rootMargin: "0px 0px -10% 0px" },
-    );
-    observer.observe(node);
-    bento.addEventListener("change", sync);
-    document.addEventListener("visibilitychange", sync);
-
-    return () => {
-      observer.disconnect();
-      bento.removeEventListener("change", sync);
-      document.removeEventListener("visibilitychange", sync);
-    };
-  }, [grid]);
-
-  useEffect(() => {
-    if (reduced || paused || !live) return;
-    const timer = window.setInterval(() => setOrder(deal), SHUFFLE_MS);
-    return () => window.clearInterval(timer);
-  }, [live, paused, reduced]);
-
-  return order;
-}
-
-/**
- * The card.
- *
- * The tile is always the same `<div>`, and the link — when there is a session
- * to link for — is an overlay stretched across it, above the scene and below
- * nothing. Swapping the outer element between a `<div>` and a `<Link>` when
- * the session resolves would remount the card mid-hover; an overlay changes
- * only what is on top of it.
- *
- * The overlay carries the card's own title as its accessible name, since the
- * link has no text of its own.
+ * The link, when there is a session to link for, is an overlay stretched
+ * across the cell. Swapping the outer element between a `<div>` and a `<Link>`
+ * when the session resolves would remount the card; an overlay changes only
+ * what is on top of it. It carries the card's title as its accessible name.
  */
 function CapabilityCard({
   body,
+  figure,
   href,
   scene,
   span,
   title,
 }: {
   readonly body: string;
+  readonly figure: string;
   readonly href: string | null;
   readonly scene: ReactNode;
-  readonly span?: 2 | 3;
+  readonly span?: 2;
   readonly title: string;
 }) {
   const wide = Boolean(span);
 
   return (
-    <div className={`lp-line group h-full flex-col ${wide ? "lg:flex-row lg:items-stretch" : ""}`}>
-      {/* Copy first in the DOM, and first on the page. A wide card reads left
-          to right — the sentence, then the picture of it — and a narrow one
-          reads top to bottom for the same reason. Stacking a wide card the way
-          a narrow one stacks was what left a 480px scene sitting in a 700px
-          card with the right half empty. */}
-      <div
-        // Not vertically centred. A wide card sitting next to a narrow one in
-        // the same row would start its heading halfway down while its
-        // neighbour started at the top — two titles on one row at two
-        // different heights, which is the first thing the eye picks up and the
-        // last thing anyone can explain. Every heading in the grid starts on
-        // the same line; the scene is what centres.
-        //
-        // No horizontal inset any more. The card's edge is a drawn rule now
-        // rather than a border around a surface, and type inset from a rule
-        // reads as a hanging indent — the heading has to start where the line
-        // starts. The gap between columns is the grid's, not the card's.
-        className={`relative z-20 flex-none pt-6 pb-3 ${wide ? "lg:w-[38%] lg:pr-6 lg:pb-7" : ""}`}
-      >
-        <h3 className="font-medium text-[15px] tracking-tight text-foreground">{title}</h3>
-        <p className="mt-2.5 max-w-[42ch] text-[14px] leading-relaxed text-muted-foreground">
-          {body}
-        </p>
+    <div
+      className={`relative flex h-full flex-col border-border border-r border-b ${wide ? "lg:flex-row lg:items-stretch" : ""}`}
+    >
+      {/* Copy first. A wide card reads left to right — the sentence, then the
+          drawing of it — and a narrow one top to bottom. Not vertically
+          centred, so every heading in a row starts on the same line. */}
+      <div className={`relative z-20 flex-none px-6 pt-6 pb-3 ${wide ? "lg:w-[38%] lg:pr-4 lg:pb-7" : ""}`}>
+        <p className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.12em]">{figure}</p>
+        <h3 className="mt-3 font-medium text-[15px] text-foreground tracking-tight">{title}</h3>
+        <p className="mt-2.5 max-w-[42ch] text-[14px] text-muted-foreground leading-relaxed">{body}</p>
       </div>
 
-      {/* The stage takes what is left. No minimum height: it is as tall as its
-          scene and the grid row equalises the cards beside it. */}
-      <div
-        className={`lp-scene lp-scene-fill pb-7 ${wide ? "lg:min-w-0 lg:flex-1 lg:py-7 lg:pl-0" : "pt-1"}`}
-      >
+      <div className={`lp-scene lp-scene-fill px-4 pb-7 ${wide ? "lg:min-w-0 lg:flex-1 lg:py-7" : "pt-1"}`}>
         {scene}
       </div>
 
@@ -284,14 +121,9 @@ function CapabilityCard({
 export function CapabilitiesSection() {
   const t = useT();
   const session = useSession();
-  const reduced = useReducedMotion();
-  const grid = useRef<HTMLDivElement>(null);
-  const [held, setHeld] = useState(false);
-  const order = useShuffledOrder(grid, held);
 
   return (
-    <section id="capacidades" className="relative isolate overflow-hidden scroll-mt-20 border-border border-t py-24 sm:py-32">
-      <div aria-hidden="true" className="bg-pattern bg-pattern-dots pointer-events-none absolute inset-0 -z-10 opacity-45" />
+    <section id="capacidades" className="relative isolate scroll-mt-20 overflow-hidden border-border border-t py-24 sm:py-32">
       <Shell className="relative">
         <SectionIntro
           figure="Fig 04"
@@ -300,57 +132,31 @@ export function CapabilitiesSection() {
           cta={{ href: "/guide", label: t("landing.capabilities.cta") }}
         />
 
-        {/* Three equal rows. Equal rows are what make a swap a translation and
-            nothing else: with rows sized by their own contents, two cards
-            trading places would resize each other and drag every row below
-            them, which is a layout recalculating rather than two cards moving.
-
-            The trailing `auto` row went with the full-width card it was for.
-
-            Below `lg` this is untouched: no spans, no shuffle, no fixed rows. */}
+        {/* The sheet: a ruled grid the cells sit on, edged top and left here
+            and right and bottom by each cell. Below `lg` there are no spans and
+            the cells simply flow. */}
         <div
-          className="mt-14 grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3 lg:[grid-template-rows:repeat(3,minmax(0,1fr))]"
-          onBlurCapture={() => setHeld(false)}
-          onFocusCapture={() => setHeld(true)}
-          onMouseEnter={() => setHeld(true)}
-          onMouseLeave={() => setHeld(false)}
-          ref={grid}
+          className={`${blueprint.sheet} mt-14 grid grid-cols-1 border-border border-t border-l sm:grid-cols-2 lg:grid-cols-3`}
         >
-          {order.map((index) => {
-            const capability = CAPABILITIES[index];
+          {CAPABILITIES.map((capability, index) => {
             const Art = CAPABILITY_ART[capability.id];
             return (
-              <motion.div
-                // The span lives on the grid item — on the card it would apply
-                // to a child of a plain block and do nothing. Keyed by the
-                // card, not the slot: that is what tells React a card moved
-                // rather than a slot's contents changed, and what gives the
-                // layout animation something to move.
-                className={SPAN_CLASS[capability.span ?? 1]}
+              // The span lives on the grid item, which is the reveal wrapper.
+              // The stagger walks by pairs, because a row here is two cards.
+              <Reveal
+                className={`h-full ${capability.span ? "lg:col-span-2" : ""}`}
+                delay={Math.floor(index / 2) * 70}
                 key={capability.id}
-                // Position only. The rows are equal, so nothing here needs to
-                // resize — and asking for a size animation as well would put a
-                // scale on the card and warp the heading inside it for the
-                // length of the move.
-                layout={reduced ? false : "position"}
-                transition={SHUFFLE_TRANSITION}
               >
-                {/* `h-full` so the card still fills the row now that the grid
-                    item is this wrapper rather than `Reveal` itself. The row
-                    is a definite height, so there is nothing circular in it.
-                    The stagger walks by pairs, because a row here is two
-                    cards, and it is keyed to where the card started so a
-                    shuffle does not re-time a reveal that already ran. */}
-                <Reveal className="h-full" delay={Math.floor(index / 2) * 70}>
-                  <CapabilityCard
-                    body={t(`landing.capabilities.${capability.id}.body`)}
-                    href={session.signedIn ? capability.href : null}
-                    scene={Art ? <Art /> : null}
-                    span={capability.span}
-                    title={t(`landing.capabilities.${capability.id}.title`)}
-                  />
-                </Reveal>
-              </motion.div>
+                <CapabilityCard
+                  body={t(`landing.capabilities.${capability.id}.body`)}
+                  figure={`Fig 04.${index + 1}`}
+                  href={session.signedIn ? capability.href : null}
+                  scene={Art ? <Art /> : null}
+                  span={capability.span}
+                  title={t(`landing.capabilities.${capability.id}.title`)}
+                />
+              </Reveal>
             );
           })}
         </div>
@@ -359,13 +165,13 @@ export function CapabilitiesSection() {
             grant, not something that is simply on. */}
         <Reveal delay={140}>
           <div className="mx-auto mt-10 max-w-[68ch] space-y-2 text-center">
-            {/* The six without a card of their own. A landing page that drops a
-                capability to tidy up its grid is a landing page that lies by
-                omission; one line is what they are worth here. */}
-            <p className="text-[13px] leading-relaxed text-muted-foreground">
+            {/* The capabilities without a card of their own. A landing page
+                that drops one to tidy up its grid lies by omission; one line is
+                what they are worth here. */}
+            <p className="text-[13px] text-muted-foreground leading-relaxed">
               {t("landing.capabilities.andAlso")}
             </p>
-            <p className="text-[13px] leading-relaxed text-muted-foreground">
+            <p className="text-[13px] text-muted-foreground leading-relaxed">
               {t("landing.capabilities.footnote")}
             </p>
           </div>

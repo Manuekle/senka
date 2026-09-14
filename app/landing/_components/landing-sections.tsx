@@ -8,7 +8,7 @@ import {
   WebhookIcon,
 } from "@hugeicons/core-free-icons";
 import type { ReactNode } from "react";
-import { SenkaMark } from "@/components/icons/senka-mark";
+import { LicenseCreditCard } from "@/components/ai-elements/license-credit-card";
 import { ChromaticTextReveal } from "@/components/motion/chromatic-text-reveal";
 import { TextReveal } from "@/components/motion/text-reveal";
 import { AnthropicLogo, GeminiLogo, OpenAiLogo, VercelLogo } from "@/components/provider-logo";
@@ -25,10 +25,10 @@ import {
 import { MercadoPagoBrandIcon } from "@/components/icons/connection-icons";
 import { BrandGlow } from "./lighting";
 import { ConversationOverlay } from "./overlays";
+import blueprint from "./blueprint.module.css";
 import styles from "./editorial.module.css";
-import { Grain } from "./grain";
 import { BrowserChrome } from "./browser-chrome";
-import { SECURITY_ART } from "./security-art";
+import { GUARANTEE_ICONS, ServerBlueprint } from "./server-blueprint";
 import {
   Disclosure,
   FigureLabel,
@@ -646,23 +646,21 @@ export function AdsSection() {
 // ── Autoalojado ─────────────────────────────────────────────────────
 
 /**
- * The six guarantees, each one a file.
+ * The six guarantees, as properties of one machine.
  *
- * This section used to be four tiles with a static icon and a sentence. That
- * was fine while it was the page's only card grid; it stopped being fine when
- * the capability grid learned to answer the cursor, because a security section
- * that is quieter than the feature section reads as the part nobody worked on
- * — and it is the part a buyer's technical person actually stops at.
+ * They used to be six cards, each with its own drawing. Six drawings of six
+ * things read as six products; what a buyer's technical person is actually
+ * looking at is one install, so it is drawn once — `ServerBlueprint` — and the
+ * guarantees are listed under it, each with the glyph it has in the drawing.
  *
- * The two entries that are new here were already true and simply never said:
- * every inbound webhook is verified by an HMAC over the raw body before it is
- * parsed, and every outbound call the agent makes is bounded by an allowlist
- * that also refuses loopback, private ranges and raw IPs. Both matter more to
- * the person reviewing this than three of the four that were here.
+ * Two entries here were true long before they were said: every inbound webhook
+ * is verified by an HMAC over the raw body before it is parsed, and every
+ * outbound call the agent makes is bounded by an allowlist that also refuses
+ * loopback, private ranges and raw IPs.
  */
 const STACK: readonly {
   readonly bodyKey: string;
-  /** Keys the scene in `SECURITY_ART`. */
+  /** Keys the glyph in `GUARANTEE_ICONS`. */
   readonly id: string;
   readonly titleKey: string;
 }[] = [
@@ -703,7 +701,6 @@ export function SelfHostedSection() {
 
   return (
     <section id="autoalojado" className={`${styles.surface} ${styles.hosting} scroll-mt-20 border-border border-t py-24 sm:py-32`}>
-      <Grain />
       <Shell className={styles.hostingContent}>
         <div className={styles.hostingIntro}>
           <Reveal>
@@ -721,16 +718,31 @@ export function SelfHostedSection() {
 
           <Reveal lift={false} delay={80}>
             <figure className={styles.installation}>
-              <div className={styles.serverStack}>
-                <div className={styles.serverFace}>
-                  <div className={styles.serverWordmark}><SenkaMark metal /><span>senka</span></div>
-                  <p className="font-medium text-sm">{t("landing.selfHosted.installation.title")}</p>
-                  <p className="mt-1 text-[13px] text-muted-foreground">{t("landing.selfHosted.installation.body")}</p>
-                  <div className={styles.serverPorts}>
-                    <span>PostgreSQL</span><span>Docker</span><span>OpenTelemetry</span>
-                  </div>
-                </div>
-              </div>
+              {/* The licence itself — the one thing Enterprise sells. It turns
+                  over on click and does nothing else: a drag here would fight
+                  the page's scroll. The numbers on it are a sample. */}
+              <LicenseCreditCard
+                className="w-full"
+                flipOnly
+                info={{
+                  daysUntilMaintenanceEnds: null,
+                  installationMatches: null,
+                  maintenanceActive: true,
+                  payload: {
+                    company: t("landing.selfHosted.license.company"),
+                    customerEmail: "",
+                    deploymentType: "self-hosted",
+                    edition: "enterprise",
+                    features: [],
+                    issuedAt: "2026-01-01T00:00:00.000Z",
+                    licenseId: "5f3a9c2e-7b41-4d8a-9e06-c1d2b3a4f5e6",
+                    maintenanceUntil: "2030-12-31T00:00:00.000Z",
+                    schemaVersion: 1,
+                  },
+                  status: "valid",
+                }}
+                installationId="a3f9c1d0-77b2-4e58-9c31-6de0f28a4b17"
+              />
               <figcaption className={styles.modelConnection}>
                 <span>{t("landing.selfHosted.installation.connection")}</span>
                 <div aria-hidden="true" className="mt-1 flex items-center gap-5">
@@ -741,15 +753,25 @@ export function SelfHostedSection() {
           </Reveal>
         </div>
 
+        {/* One machine, then what it guarantees. The sheet is the same ruled
+            plane the capability cards sit on, in the neutral ink. */}
+        <Reveal lift={false}>
+          <figure className={`${blueprint.sheet} ${styles.serverPlan}`} data-tone="neutral">
+            <ServerBlueprint />
+          </figure>
+        </Reveal>
+
         <div className={styles.guarantees}>
           {STACK.map((item, index) => {
-            const Art = SECURITY_ART[item.id];
+            const icon = GUARANTEE_ICONS[item.id];
             return (
               <Reveal key={item.id} delay={(index % 3) * 60}>
-                <article className={`${styles.guarantee} group`}>
-                  <div aria-hidden="true" className={styles.guaranteeArt}>{Art ? <Art /> : null}</div>
-                  <h3 className="text-[15px] font-medium tracking-tight">{t(item.titleKey)}</h3>
-                  <p className="mt-2.5 text-[14px] leading-relaxed text-muted-foreground">{t(item.bodyKey)}</p>
+                <article className={styles.guarantee}>
+                  {icon ? (
+                    <HugeiconsIcon className="text-muted-foreground" icon={icon} size={18} strokeWidth={1.5} />
+                  ) : null}
+                  <h3 className="mt-3 text-[15px] font-medium tracking-tight">{t(item.titleKey)}</h3>
+                  <p className="mt-2 text-[14px] leading-relaxed text-muted-foreground">{t(item.bodyKey)}</p>
                 </article>
               </Reveal>
             );

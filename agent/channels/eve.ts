@@ -1,6 +1,8 @@
 import { eveChannel } from "eve/channels/eve";
 import { type AuthFn, httpBasic, localDev, placeholderAuth } from "eve/channels/auth";
 import { SESSION_COOKIE, getSessionAccountEmail } from "@/lib/auth/store";
+import { activeBusinessId, listBusinesses } from "../../lib/business-scope";
+import { WORKSPACE_COOKIE } from "../../lib/workspace-context";
 
 const username = process.env.ROUTE_AUTH_BASIC_USER?.trim();
 const password = process.env.ROUTE_AUTH_BASIC_PASSWORD;
@@ -35,11 +37,14 @@ function appSession(): AuthFn<Request> {
   return async (request) => {
     const email = await getSessionAccountEmail(readCookie(request, SESSION_COOKIE));
     if (!email) return null;
+    const workspaceId = readCookie(request, WORKSPACE_COOKIE) ?? await activeBusinessId();
+    const { businesses } = await listBusinesses();
+    if (!businesses.some((business) => business.id === workspaceId && business.access !== "suspended")) return null;
     return {
       authenticator: "app",
       principalId: email,
       principalType: "user",
-      attributes: { email },
+      attributes: { email, workspaceId },
     };
   };
 }
@@ -61,5 +66,5 @@ export default eveChannel({
   auth:
     process.env.NODE_ENV === "production"
       ? [appSession(), productionAuth]
-      : [localDev(), appSession(), productionAuth],
+      : [appSession(), localDev(), productionAuth],
 });

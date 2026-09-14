@@ -45,6 +45,8 @@ export type DocumentId =
   | "chat-models"
   | "seo"
   | "businesses"
+  | "workspace-purchases"
+  | "session-workspaces"
   | "phone-numbers"
   | "agent-skills"
   | "mcp-servers"
@@ -224,6 +226,8 @@ export function createDocumentStore<T>(options: {
    * ask an owner to set it up again for every shop they added.
    */
   readonly scoped?: boolean;
+  /** Transactions that must never silently fall back to a separate file. */
+  readonly requireDatabase?: boolean;
 }): DocumentStore<T> {
   let dbMode: boolean | null = null;
   let writeQueue: Promise<unknown> = Promise.resolve();
@@ -265,6 +269,7 @@ export function createDocumentStore<T>(options: {
 
   async function usingDb(where?: { id: StoredDocumentId; file: string }): Promise<boolean> {
     if (!process.env.WORKFLOW_POSTGRES_URL) {
+      if (options.requireDatabase) throw new Error("PostgreSQL is required for this operation");
       dbMode = false;
       return false;
     }
@@ -277,7 +282,8 @@ export function createDocumentStore<T>(options: {
       }
       dbMode = true;
       migrated.add(resolved.id);
-    } catch {
+    } catch (error) {
+      if (options.requireDatabase) throw error;
       // Database unreachable — keep serving the file rather than failing every
       // read, and retry on the next call rather than caching the outage.
       return false;

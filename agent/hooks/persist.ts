@@ -1,5 +1,6 @@
 import { defineHook } from "eve/hooks";
 import { channelFromKind, recordChatMessage, startChatSession } from "../../lib/business-store";
+import { bindSessionWorkspace } from "../lib/workspace";
 
 /** Keep the full reply in the transcript; only the history preview is clipped. */
 function fullText(value: unknown): string {
@@ -14,6 +15,7 @@ function fullText(value: unknown): string {
 export default defineHook({
   events: {
     async "session.started"(_event, ctx) {
+      await bindSessionWorkspace(ctx);
       try {
         const channel = channelFromKind(ctx.channel.kind);
         const principalId = ctx.session.auth.current?.principalId;

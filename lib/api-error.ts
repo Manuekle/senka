@@ -37,7 +37,9 @@ export type ApiErrorCode =
   | "unsupported_format"
   | "nothing_to_update"
   | "no_recognized_keys"
-  | "wrong_password";
+  | "wrong_password"
+  | "workspace_unavailable"
+  | "workspace_payment_required";
 
 type CodeSpec = { readonly status: number; readonly message: string };
 
@@ -67,6 +69,8 @@ const CODES: Record<ApiErrorCode, CodeSpec> = {
   nothing_to_update: { status: 400, message: "The request didn't ask for any change." },
   no_recognized_keys: { status: 422, message: "The file held no credential this app knows." },
   wrong_password: { status: 401, message: "That current password is incorrect." },
+  workspace_unavailable: { status: 403, message: "Workspace access is unavailable. Review billing or switch workspace." },
+  workspace_payment_required: { status: 402, message: "Additional workspaces require a monthly subscription." },
 };
 
 export interface ApiErrorBody {
@@ -150,7 +154,10 @@ export function withApiErrors<A extends unknown[], R extends Response>(
 ): (...args: A) => Promise<Response> {
   return async (...args: A): Promise<Response> => {
     try {
-      return await handler(...args);
+      const request = args[0] instanceof Request ? args[0] : undefined;
+      if (request && /^\/api\/(auth|health)(\/|$)/.test(new URL(request.url).pathname)) return await handler(...args);
+      const { runWorkspaceRequest } = await import("./workspace-request");
+      return await runWorkspaceRequest(request, async () => handler(...args));
     } catch (error) {
       console.error("[api] unhandled failure", error);
       return apiFailure(error);

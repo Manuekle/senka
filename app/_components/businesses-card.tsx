@@ -16,6 +16,7 @@ import { useConfirmDialog } from "@/components/confirm-dialog";
 import { fetchJson, type UiError } from "@/lib/api-error-message";
 import { useT } from "@/lib/i18n/provider";
 import { cn } from "@/lib/utils";
+import { WorkspaceSubscriptions } from "./workspace-subscriptions";
 
 // The businesses on this installation, where the account lives.
 //
@@ -32,6 +33,8 @@ type Business = {
   readonly active: boolean;
   readonly primary: boolean;
   readonly logoUpdatedAt: string | null;
+  readonly purchaseId?: string;
+  readonly access?: "active" | "suspended";
 };
 
 export function BusinessesCard() {
@@ -194,7 +197,7 @@ export function BusinessesCard() {
                   ) : (
                     <>
                       {business.active ? null : (
-                        <Button size="sm" variant="outline" disabled={busy} onClick={() => void switchTo(business.id)}>
+                        <Button size="sm" variant="outline" disabled={busy || business.access === "suspended"} onClick={() => void switchTo(business.id)}>
                           {t("business.switchAction")}
                         </Button>
                       )}
@@ -212,7 +215,7 @@ export function BusinessesCard() {
                       {/* The original business has no "remove" — every unsuffixed
                           document and file on this install is its own, and a
                           button that hid all of it would be a trap. */}
-                      {business.primary || business.active ? null : (
+                      {business.primary || business.active || business.purchaseId ? null : (
                         <Button
                           size="icon-sm"
                           variant="ghost"
@@ -229,6 +232,7 @@ export function BusinessesCard() {
               </li>
             ))}
           </ul>
+          <WorkspaceSubscriptions />
         </div>
         {/* Scope note — outside the inner border, matching the skills card footer */}
         <div className="px-2.5 pt-2 pb-0.5">

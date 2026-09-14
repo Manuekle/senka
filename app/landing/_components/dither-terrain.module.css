@@ -1,0 +1,33 @@
+/* One canvas pixel per dither cell. `pixelated` is what keeps each cell a hard
+   square once CSS scales the bitmap up — without it the upscale is smoothed
+   and the ground turns into a grey blur with no grid in it. */
+.canvas {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  color: var(--foreground);
+  image-rendering: pixelated;
+  opacity: 0;
+  transition: opacity 900ms var(--lp-ease-soft);
+}
+
+/* Faded in once there is something on it: the field is painted after
+   hydration, and it should arrive rather than switch on.
+
+   How hard the ink sits is the one thing that differs by theme. Full-strength
+   foreground is the reference's black-on-white, and on this page it would
+   outweigh the heading; these keep the dense ground a clear mid-tone under
+   the copy's contrast in both. */
+.canvas[data-painted] {
+  opacity: 0.28;
+}
+
+:global(.dark) .canvas[data-painted] {
+  opacity: 0.32;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas {
+    transition: none;
+  }
+}
