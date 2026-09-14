@@ -16,7 +16,7 @@ import styles from "./dither-terrain.module.css";
  *
  * ── Why a canvas, and why such a small one ─────────────────────────────
  *
- * One canvas pixel per cell: a 1440px section at 6px cells is a bitmap 240
+ * One canvas pixel per cell: a 1440px section at 4px cells is a bitmap 360
  * pixels wide, and CSS scales it up with `image-rendering: pixelated`, so every
  * cell lands as a hard-edged square at any pixel ratio. The alternatives both
  * cost more for the same picture — a `fillRect` per cell at device resolution,
@@ -38,10 +38,10 @@ import styles from "./dither-terrain.module.css";
 /** A point on the skyline: `u` across the box and `v` down it, both 0–1. */
 export type RidgePoint = readonly [u: number, v: number];
 
-/** One cell, in CSS pixels. Coarse enough to read as squares from across the
- *  room, fine enough that the globe's own dot-mapped land stays the finer
- *  texture in the section. */
-const CELL = 6;
+/** One cell, in CSS pixels. Fine enough to read as print grain rather than a
+ *  grey slab, while staying coarser than the globe's own dot-mapped land —
+ *  that stays the finer texture in the section. */
+const CELL = 4;
 
 /** How far below the skyline the ground takes to close up, in CSS pixels. One
  *  of these down it is about seven-tenths ink; the first few rows under the
@@ -160,10 +160,12 @@ function paint(
       // Capped short of solid. A field left to saturate is a flat slab of grey
       // with no grid in it, which is the one thing a dither must not become;
       // at the cap the heaviest ground still has a hole in every 8×8 block.
+      // Lowered for the finer cell: smaller squares close up faster, so the
+      // same cap reads denser than it did at 6px.
       const lift = Math.min(((fromFloor + 0.5) * CELL) / FLOOR, 1);
       const tone =
         Math.min(
-          0.88,
+          0.8,
           0.8 * (1 - Math.exp(-2.2 * depth)) +
             (fbm(x / 260, y / 200) - 0.5) * 1.5 * Math.min(depth, 1),
         ) *

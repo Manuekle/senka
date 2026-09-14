@@ -239,7 +239,7 @@ function ClosingPanel({ editorial }: { readonly editorial: boolean }) {
   const session = useSession();
 
   return (
-    <div className={`lp-cta px-8 py-12 sm:px-12 sm:py-14 ${editorial ? styles.surface : ""}`}>
+    <div className={`lp-cta px-6 py-8 sm:px-12 sm:py-14 ${editorial ? styles.surface : ""}`}>
       {editorial ? <Grain variant="closing" /> : null}
       <LightBar className="inset-x-[34%] top-0" drop="20rem" intensity={0.9} />
 
@@ -271,8 +271,8 @@ function ClosingPanel({ editorial }: { readonly editorial: boolean }) {
             {t("landing.closing.body")}
           </p>
 
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Button asChild size="lg">
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <Button asChild className="w-full justify-center sm:w-auto" size="lg">
               <Link href={session.signedIn ? "/dashboard" : "/login"} prefetch={!session.signedIn}>
                 {session.signedIn
                   ? t("landing.cta.openApp")
@@ -281,7 +281,7 @@ function ClosingPanel({ editorial }: { readonly editorial: boolean }) {
                     : t("landing.cta.install")}
               </Link>
             </Button>
-            <Button asChild size="lg" variant="outline">
+            <Button asChild className="w-full justify-center sm:w-auto" size="lg" variant="outline">
               <Link href="/pricing">{t("landing.cta.pricing")}</Link>
             </Button>
           </div>
@@ -344,18 +344,19 @@ export function LandingFooter({ editorial = false }: { readonly editorial?: bool
         <ClosingPanel editorial={editorial} />
       </Shell>
 
-      <Shell className="relative z-[1] pt-20">
-        <div className="grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-12">
+      <Shell className="relative z-[1] pt-12 lg:pt-20">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-8 lg:grid-cols-12 lg:gap-x-8 lg:gap-y-12">
           {/* Wider than a link column and deliberately so: it carries a
               paragraph, and a 24ch measure next to two lists of one-word links
-              is a column of confetti. */}
-          <div className="lg:col-span-4 lg:pr-8">
+              is a column of confetti. Full width on mobile so the four link
+              columns below it can sit two-up instead of stacking five tall. */}
+          <div className="col-span-2 lg:col-span-4 lg:pr-8">
             <Wordmark />
             <p className="mt-4 max-w-[30ch] text-[13px] leading-relaxed text-muted-foreground">
               {t("landing.footer.tagline")}
             </p>
 
-            <p className="lp-eyebrow mt-8">{t("landing.footer.stackLabel")}</p>
+            <p className="lp-eyebrow mt-6 lg:mt-8">{t("landing.footer.stackLabel")}</p>
             <p className="mt-2.5 max-w-[42ch] text-[13px] leading-relaxed text-muted-foreground">
               {t("landing.footer.builtOn")}
             </p>
@@ -365,9 +366,9 @@ export function LandingFooter({ editorial = false }: { readonly editorial?: bool
               <span>{t("landing.footer.ycApplication")}</span>
             </div>
 
-            <div className="mt-8">
+            <div className="mt-6">
               <p className="lp-eyebrow">{t("landing.footer.socialLabel")}</p>
-              <nav aria-label={t("landing.footer.socialLabel")} className="mt-3 flex items-center gap-3">
+              <nav aria-label={t("landing.footer.socialLabel")} className="mt-3 flex items-center gap-4">
                 {SOCIAL_LINKS.map(({ colour, className, href, label, mark: Mark }) => (
                   <a
                     aria-label={label}
@@ -444,7 +445,7 @@ export function LandingFooter({ editorial = false }: { readonly editorial?: bool
           </div>
         </div>
 
-        <div className="mt-14 flex flex-wrap items-center gap-x-6 gap-y-4 border-border border-t pt-6">
+        <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-4 border-border border-t pt-6 lg:mt-14">
           <p className="text-[12px] text-muted-foreground">
             © {year} senka. {t("landing.footer.rights")}
           </p>

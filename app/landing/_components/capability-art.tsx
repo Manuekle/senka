@@ -3,6 +3,7 @@
 import { HugeiconsIcon } from "@/components/icons/icon";
 import { Blockchain05Icon, Target01Icon, Tick02Icon, WebhookIcon } from "@hugeicons/core-free-icons";
 import type { ReactNode } from "react";
+import { useT } from "@/lib/i18n/provider";
 import { at, Bloom, Brackets, Chip, Mono, Plate, Row, Scene } from "./scene-kit";
 import {
   CalendarBlueprint as CalendarScene,
@@ -75,9 +76,10 @@ export function CrmScene() {
  * down to tag them.
  */
 export function ProspectScene() {
+  const t = useT();
   const threads = [
-    { stage: "ganado", who: "Lucía Romero" },
-    { stage: "negociando", who: "Diego Paz" },
+    { key: "landing.capabilities.art.prospect.won", who: "Lucía Romero" },
+    { key: "landing.capabilities.art.prospect.negotiating", who: "Diego Paz" },
   ];
 
   return (
@@ -99,7 +101,7 @@ export function ProspectScene() {
                 className="absolute inset-y-0 right-0 translate-y-1 text-muted-foreground opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100"
                 style={at(160 + index * 90)}
               >
-                {thread.stage}
+                {t(thread.key)}
               </Chip>
             </span>
           </Row>
@@ -120,6 +122,7 @@ export function ProspectScene() {
  * allowlist is the subject, so the route is spelled out rather than implied.
  */
 export function ApiScene() {
+  const t = useT();
   return (
     <Scene>
       {/* A measure on the full-width card. Left to stretch, the wire ran the
@@ -153,7 +156,7 @@ export function ApiScene() {
             <span className="lp-plate flex size-12 items-center justify-center rounded-xl text-muted-foreground transition-colors duration-500 group-hover:text-foreground">
               <HugeiconsIcon icon={WebhookIcon} size={21} strokeWidth={1.75} />
             </span>
-            <Mono className="text-muted-foreground">tu API</Mono>
+            <Mono className="text-muted-foreground">{t("landing.capabilities.art.api.yourApi")}</Mono>
           </div>
         </div>
 
@@ -163,7 +166,7 @@ export function ApiScene() {
             icon={Tick02Icon}
             style={at(520)}
           >
-            200 · 6 unidades en stock
+            {t("landing.capabilities.art.api.stock")}
           </Chip>
         </div>
       </div>

@@ -9,6 +9,12 @@
   image-rendering: pixelated;
   opacity: 0;
   transition: opacity 900ms var(--lp-ease-soft);
+  /* The floor dissolve: the field thins toward the box's floor in the paint,
+     but a grid still ends in a row of squares. The mask melts that last row
+     into the page, so the ground fades rather than clipping where the next
+     section starts. */
+  mask-image: linear-gradient(to bottom, black 82%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 82%, transparent 100%);
 }
 
 /* Faded in once there is something on it: the field is painted after
@@ -16,14 +22,15 @@
 
    How hard the ink sits is the one thing that differs by theme. Full-strength
    foreground is the reference's black-on-white, and on this page it would
-   outweigh the heading; these keep the dense ground a clear mid-tone under
-   the copy's contrast in both. */
+   outweigh the heading; these keep the field a grain under the copy rather
+   than a grey mass. Lighter than before on purpose: at 4px cells the same
+   opacity reads denser, and the dense ground was sitting as one flat tone. */
 .canvas[data-painted] {
-  opacity: 0.28;
+  opacity: 0.18;
 }
 
 :global(.dark) .canvas[data-painted] {
-  opacity: 0.32;
+  opacity: 0.2;
 }
 
 @media (prefers-reduced-motion: reduce) {

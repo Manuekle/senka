@@ -24,8 +24,11 @@ import { cn } from "@/lib/utils";
 // of the sigil's own shapes set into it. The edition and the validity sit in a
 // clearing at the foot of the field. The full ids are on the back.
 //
-// One card stock in both themes: a neutral charcoal with light-grey ink.
-// Neither end of the scale — the card is never black and the ink never white.
+// Two card stocks, one per theme: near-white with dark ink in light mode, a
+// neutral charcoal with light-grey ink in dark mode. Neither end of the
+// scale — the card is never pure white-on-white nor black with white ink.
+// Tokens live in globals.css (`--license-card-*`) so the themed values
+// resolve from CSS before paint, with no theme-flash from React state.
 //
 // Nothing here gates anything — see lib/license/verify.ts. This is a picture
 // of a fact, not a check.
@@ -50,13 +53,13 @@ const SPRING_TILT = { stiffness: 260, damping: 22, mass: 0.5 } as const;
 const SPRING_FLIP = { type: "spring", stiffness: 220, damping: 26, mass: 0.7 } as const;
 const DRAG_RETURN = { bounceStiffness: 320, bounceDamping: 26 } as const;
 
-/** The card stock. Flat, and the same in light and dark. */
-const CARD = "oklch(0.255 0 0)";
+/** The card stock, stripe, ink, and edge — themed via CSS vars in globals.css. */
+const CARD = "var(--license-card-bg)";
 /** The stripe on the back, one step down from the stock. */
-const STRIPE = "oklch(0.2 0 0)";
-const INK = "oklch(0.88 0 0)";
-const INK_MUTED = "oklch(0.88 0 0 / 0.55)";
-const EDGE = "oklch(1 0 0 / 0.08)";
+const STRIPE = "var(--license-card-stripe)";
+const INK = "var(--license-card-ink)";
+const INK_MUTED = "var(--license-card-ink-muted)";
+const EDGE = "var(--license-card-edge)";
 
 /** Syllables for the card name, one per hex digit. */
 const PREFIX = ["dos", "ris", "bal", "mig", "sam", "lit", "wan", "pol", "fid", "nat", "tob", "sar", "hol", "rid", "lap", "mod"];
@@ -107,7 +110,7 @@ function shape(kind: number): ReactNode {
       return (
         <>
           <rect height="20" width="20" />
-          <circle cx="10" cy="10" fill={CARD} r="3.2" />
+          <circle cx="10" cy="10" r="3.2" style={{ fill: CARD }} />
         </>
       );
     case 4:

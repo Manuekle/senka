@@ -122,6 +122,20 @@ const GROUND: readonly RidgePoint[] = [
   [1, 0.44],
 ];
 
+/**
+ * The same ground on a phone, where the section stacks — copy, globe, quote,
+ * rail, full width — so there is no empty half for a hillside to climb. A low
+ * band with a gentle rise under the globe's foot: sparse cells up top, the
+ * dense mass only at the floor behind the rail. Never under a line of text.
+ */
+const GROUND_MOBILE: readonly RidgePoint[] = [
+  [0, 0.94],
+  [0.35, 0.93],
+  [0.5, 0.9],
+  [0.65, 0.93],
+  [1, 0.94],
+];
+
 /** The headshot, or the initials plate the app uses for a contact without one. */
 function Avatar({ name, src }: { readonly name: string; readonly src?: string }) {
   if (src) {
@@ -370,10 +384,11 @@ export function ProofSection() {
 
       {/* ── The ground ──────────────────────────────────────────────────
           First in the section, so everything positioned after it — the globe
-          included — paints over it. From `lg` only: below that the section
-          stacks and the rail and the quote run full width, so there is no
-          empty half for the ground to stand in, only text to sit under. */}
+          included — paints over it. Two ridges: the hillside climbs the empty
+          right half from `lg`, while on a phone the section stacks and the
+          ground is a low band that never sits under text. */}
       <DitherTerrain className="inset-0 hidden lg:block" ridge={GROUND} />
+      <DitherTerrain className="inset-0 block lg:hidden" ridge={GROUND_MOBILE} />
 
       {/* ── The globe band ──────────────────────────────────────────────
           Its own positioning context, so the sphere is centred on the copy and
@@ -453,7 +468,7 @@ export function ProofSection() {
             draggable — and the Shells above open their empty halves the same
             way, so no transparent box stands between the pointer and the
             sphere. */}
-        <div className="pointer-events-none relative mt-14 flex justify-center px-6 lg:absolute lg:inset-y-0 lg:right-0 lg:mt-0 lg:block lg:w-[70vw] lg:px-0">
+        <div className="pointer-events-none relative mt-2 flex justify-center lg:absolute lg:inset-y-0 lg:right-0 lg:mt-0 lg:block lg:w-[70vw] lg:px-0">
           {/* Sized and offset in `vw`, not `rem`, and not in `%` of the
               wrapper. A fixed rem width is one globe for every screen: the one
               that crops nicely at 1440 is wider than the viewport at 1024,
@@ -461,9 +476,12 @@ export function ProofSection() {
               Percentages of the wrapper have the same problem one level
               removed. In `vw` the crop is the same fraction of the sphere at
               every width — which is what "bleeds off the edge" means — and the
-              gap between the copy and the rim holds at every size. */}
+              gap between the copy and the rim holds at every size.
+              On a phone the sphere runs edge to edge at `100vw`, cropped on no
+              side. `shrink-0` is load-bearing — without it the flex row
+              shrinks the sphere below its width. */}
           <ClientGlobe
-            className="max-w-[22rem] sm:max-w-[28rem] lg:absolute lg:top-[62%] lg:right-[-13vw] lg:w-[64vw] lg:max-w-none lg:-translate-y-1/2"
+            className="w-[100vw] max-w-[36rem] shrink-0 sm:max-w-[40rem] lg:absolute lg:top-[62%] lg:right-[-13vw] lg:w-[64vw] lg:max-w-none lg:-translate-y-1/2"
             clients={CLIENTS}
           />
         </div>
@@ -474,7 +492,11 @@ export function ProofSection() {
             `pointer-events` split as the copy Shell above — the quote card
             keeps its hover-hold, the empty right half lets drags through to
             the globe behind it. */}
-        <Shell className="pointer-events-none relative z-10 mt-16 lg:mt-24">
+        {/* `-mt-8` on a phone: the quote rides up over the sphere's south
+            pole instead of starting below the canvas. The pole is open ocean
+            on the dot map, so the glass mark and the first lines sit over
+            nearly empty ground — tight, not overlapping. */}
+        <Shell className="pointer-events-none relative z-10 -mt-8 lg:mt-24">
           <div className="pointer-events-auto lg:max-w-[44%]">
             {TESTIMONIALS.length === 0 ? (
               <Reveal delay={60}>

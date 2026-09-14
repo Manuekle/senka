@@ -324,6 +324,15 @@
     oklch(1 0 0 / 0.9) 22%,
     oklch(1 0 0 / 0.9) 78%,
     transparent 100%);
+
+  /* ── License card stock (light) ─────────────────────────── */
+  /* Near-white stock with dark ink, so the card reads as an object on the
+     muted wallet in light mode. Dark values live in the `.dark` block below. */
+  --license-card-bg: oklch(0.985 0 0);
+  --license-card-stripe: oklch(0.89 0 0);
+  --license-card-ink: oklch(0.22 0 0);
+  --license-card-ink-muted: oklch(0.22 0 0 / 0.6);
+  --license-card-edge: oklch(0 0 0 / 0.08);
 }
 
 /* Dark theme: applied via .dark class on <html>. The inline script
@@ -497,6 +506,14 @@
     oklch(1 0 0 / 0.14) 22%,
     oklch(1 0 0 / 0.14) 78%,
     transparent 100%);
+
+  /* ── License card stock (dark) ──────────────────────────── */
+  /* Neutral charcoal with light-grey ink. Never black, never white. */
+  --license-card-bg: oklch(0.255 0 0);
+  --license-card-stripe: oklch(0.2 0 0);
+  --license-card-ink: oklch(0.88 0 0);
+  --license-card-ink-muted: oklch(0.88 0 0 / 0.55);
+  --license-card-edge: oklch(1 0 0 / 0.08);
 }
 
 * {
@@ -5105,7 +5122,7 @@ html.lenis body {
      one is a font size and the other is a box. In flow the word sizes the box
      and the margin decides how much of it the footer's `overflow: hidden`
      takes off. */
-  margin-top: 3.5rem;
+  margin-top: 2rem;
   margin-bottom: -0.24em;
   pointer-events: none;
   user-select: none;
@@ -5129,6 +5146,12 @@ html.lenis body {
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+
+@media (min-width: 1024px) {
+  .lp-footmark {
+    margin-top: 3.5rem;
+  }
 }
 
 :root {
