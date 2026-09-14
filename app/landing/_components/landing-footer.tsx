@@ -262,8 +262,8 @@ function ClosingPanel({ editorial }: { readonly editorial: boolean }) {
           panel that already has a fixture above it and a lit orbit beside it
           it is a third light source in a box the size of a postcard. The
           heading leads. */}
-      <div className="relative flex items-center justify-between gap-8">
-        <div className="max-w-[46ch]">
+      <div className="relative flex min-w-0 flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0 flex-1 max-w-[46ch]">
           <h2 className="max-w-[18ch] text-balance font-cooper font-heading font-semibold text-[clamp(1.875rem,3.4vw,2.75rem)] text-foreground leading-[1.04] tracking-[-0.03em]">
             {t("landing.closing.title")}
           </h2>
@@ -271,8 +271,8 @@ function ClosingPanel({ editorial }: { readonly editorial: boolean }) {
             {t("landing.closing.body")}
           </p>
 
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-            <Button asChild className="w-full justify-center sm:w-auto" size="lg">
+          <div className="mt-6 flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <Button asChild className="w-full justify-center whitespace-normal text-center leading-snug sm:w-auto" size="lg">
               <Link href={session.signedIn ? "/dashboard" : "/login"} prefetch={!session.signedIn}>
                 {session.signedIn
                   ? t("landing.cta.openApp")
@@ -281,7 +281,7 @@ function ClosingPanel({ editorial }: { readonly editorial: boolean }) {
                     : t("landing.cta.install")}
               </Link>
             </Button>
-            <Button asChild className="w-full justify-center sm:w-auto" size="lg" variant="outline">
+            <Button asChild className="w-full justify-center whitespace-normal text-center leading-snug sm:w-auto" size="lg" variant="outline">
               <Link href="/pricing">{t("landing.cta.pricing")}</Link>
             </Button>
           </div>
@@ -289,7 +289,7 @@ function ClosingPanel({ editorial }: { readonly editorial: boolean }) {
 
         {/* Pushed past the panel's right edge; `overflow: hidden` on `.lp-cta`
             is what crops it. */}
-        <div className="-mr-16 shrink-0">
+        <div className="-mr-16 hidden shrink-0 lg:block">
           <ChannelArc />
         </div>
       </div>
