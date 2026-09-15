@@ -1,11 +1,12 @@
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { createDocumentStore } from "./doc-store";
-import { createBusiness, requireBusinessDatabase, setBusinessAccess } from "./business-scope";
+import { requireBusinessDatabase, type BusinessEntry } from "./business-scope";
 import { getInstallationId } from "./license/installation";
 import { getPlatformStripeKey } from "./stripe";
 import { readBillingState } from "./billing-store";
 import { sharedPool } from "./postgres-pool";
+import type { PoolClient } from "pg";
 
 export type WorkspacePurchase = {
   id: string;
@@ -127,12 +128,16 @@ export function subscriptionIdFrom(object: Record<string, unknown>): string | un
 /** Read current Stripe state: redelivery and out-of-order webhooks cannot rewind access. */
 export async function syncWorkspaceSubscription(subscriptionId: string): Promise<boolean> {
   if (!process.env.WORKFLOW_POSTGRES_URL) throw new Error("PostgreSQL is required for workspace billing");
+  // Warm schema and installation metadata before taking a connection. The
+  // transaction below uses only that one connection, even with a pool of one.
+  await purchases.read();
+  const installationId = await getInstallationId();
   const client = await sharedPool().connect();
   try {
     await client.query("BEGIN");
     await client.query("SET LOCAL lock_timeout = '10s'");
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [`workspace-subscription:${subscriptionId}`]);
-    const result = await syncSubscription(subscriptionId);
+    const result = await syncSubscription(client, subscriptionId, installationId);
     await client.query("COMMIT");
     return result;
   } catch (error) {
@@ -141,11 +146,15 @@ export async function syncWorkspaceSubscription(subscriptionId: string): Promise
   } finally { client.release(); }
 }
 
-async function syncSubscription(subscriptionId: string): Promise<boolean> {
+async function syncSubscription(client: PoolClient, subscriptionId: string, installationId: string): Promise<boolean> {
   const subscription = await stripe<StripeSubscription>(`subscriptions/${encodeURIComponent(subscriptionId)}?expand[]=latest_invoice`);
   if (subscription.metadata?.kind !== "workspace") return false;
-  if (subscription.metadata.installationId !== await getInstallationId()) return true;
-  const purchase = (await purchases.read()).purchases.find((p) => p.id === subscription.metadata.purchaseId);
+  if (subscription.metadata.installationId !== installationId) return true;
+  const locked = await client.query<{ data: { purchases: WorkspacePurchase[] } }>(
+    "SELECT data FROM senka.documents WHERE id = $1 FOR UPDATE", ["workspace-purchases"],
+  );
+  const store = locked.rows[0]?.data;
+  const purchase = store?.purchases.find((p) => p.id === subscription.metadata.purchaseId);
   if (!purchase) return true;
   if (purchase.subscriptionId && purchase.subscriptionId !== subscription.id) throw new Error("Workspace subscription mismatch");
   if (subscription.items.data.length !== 1 || subscription.items.data[0].price.id !== purchase.priceId || subscription.items.data[0].quantity !== 1) throw new Error("Workspace subscription price mismatch");
@@ -154,18 +163,25 @@ async function syncSubscription(subscriptionId: string): Promise<boolean> {
   const active = subscription.status === "active" && paid;
   const cancelled = ["canceled", "unpaid", "incomplete_expired", "paused"].includes(subscription.status);
   const status = active ? "active" : cancelled ? "cancelled" : purchase.subscriptionId ? "past_due" : "pending";
-  await requireBusinessDatabase();
-  // Provision is repeatable. It never switches the operator's selected workspace.
-  if (active) await createBusiness(purchase.name, { id: purchase.workspaceId, purchaseId: purchase.id });
-  if (active || purchase.subscriptionId) await setBusinessAccess(purchase.workspaceId, active ? "active" : "suspended");
-  await purchases.update((store) => {
-    const entry = store.purchases.find((p) => p.id === purchase.id)!;
-    Object.assign(entry, {
-      subscriptionId: subscription.id, customerId: subscription.customer, status,
-      cancelAtPeriodEnd: subscription.cancel_at_period_end,
-      periodEnd: subscription.items.data[0].current_period_end ?? subscription.current_period_end,
-    });
+  // Provision and entitlement commit together. Retries never create a second
+  // workspace and a partial database failure never grants unpaid access.
+  if (active || purchase.subscriptionId) {
+    const initial = { businesses: [{ id: "default", name: "", createdAt: new Date().toISOString() }], activeId: "default" };
+    await client.query("INSERT INTO senka.documents (id, data) VALUES ($1, $2::jsonb) ON CONFLICT (id) DO NOTHING", ["businesses", JSON.stringify(initial)]);
+    const row = await client.query<{ data: { businesses: BusinessEntry[]; activeId: string } }>("SELECT data FROM senka.documents WHERE id = $1 FOR UPDATE", ["businesses"]);
+    const registry = row.rows[0].data;
+    if (active && !registry.businesses.some((entry) => entry.id === purchase.workspaceId)) {
+      registry.businesses.push({ id: purchase.workspaceId, purchaseId: purchase.id, name: purchase.name, createdAt: new Date().toISOString(), access: "active" });
+    }
+    registry.businesses = registry.businesses.map((entry) => entry.id === purchase.workspaceId ? { ...entry, access: active ? "active" : "suspended" } : entry);
+    await client.query("UPDATE senka.documents SET data = $2::jsonb, updated_at = now() WHERE id = $1", ["businesses", JSON.stringify(registry)]);
+  }
+  Object.assign(purchase, {
+    subscriptionId: subscription.id, customerId: subscription.customer, status,
+    cancelAtPeriodEnd: subscription.cancel_at_period_end,
+    periodEnd: subscription.items.data[0].current_period_end ?? subscription.current_period_end,
   });
+  await client.query("UPDATE senka.documents SET data = $2::jsonb, updated_at = now() WHERE id = $1", ["workspace-purchases", JSON.stringify(store)]);
   return true;
 }
 

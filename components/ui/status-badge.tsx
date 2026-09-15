@@ -18,6 +18,7 @@ import {
   CancelCircleIcon,
   Clock01Icon,
 } from "@hugeicons/core-free-icons";
+import { ActionSwapIcon, ActionSwapText } from "@/components/motion/action-swap";
 import { useT } from "@/lib/i18n/provider";
 import { cn } from "@/lib/utils";
 // ── Status badge system ──────────────────────────────────────────────
@@ -175,6 +176,7 @@ export function StatusBadge({
         className,
       )}
       style={{
+        transition: "background-color 150ms ease-out, color 150ms ease-out",
         backgroundColor: `var(${config.bgVar})`,
         color: `var(${config.fgVar})`,
         borderRadius: "8px",
@@ -183,8 +185,10 @@ export function StatusBadge({
         fontSize: "10px",
       }}
     >
-      <HugeiconsIcon icon={config.icon} size={11} strokeWidth={1.75} className="shrink-0" />
-      {label ?? resolved}
+      <ActionSwapIcon value={status} className="size-[11px]">
+        <HugeiconsIcon icon={config.icon} size={11} strokeWidth={1.75} className="shrink-0" />
+      </ActionSwapIcon>
+      <ActionSwapText value={`${status}:${label ?? resolved}`}>{label ?? resolved}</ActionSwapText>
     </span>
   );
 }

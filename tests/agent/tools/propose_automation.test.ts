@@ -19,7 +19,9 @@ vi.mock("node:os", async () => {
 // Must import after the mock.
 const proposeAutomation = (await import("../../../agent/tools/propose_automation")).default;
 const proposeAutomationUpdate = (await import("../../../agent/tools/propose_automation_update")).default;
+const proposeAgent = (await import("../../../agent/tools/propose_agent")).default;
 const listAutomationsTool = (await import("../../../agent/tools/list_automations")).default;
+const { listAgents, startChatSession } = await import("../../../lib/business-store");
 
 // The tools read `ctx.session.id` for the per-agent capability check (see
 // lib/agent-scope.ts). No contact exists for this id, so no agent is assigned
@@ -28,6 +30,7 @@ const fakeCtx = { session: { id: "test-session" } } as unknown as ToolContext;
 
 beforeEach(() => {
   mkdirSync(TEST_DIR, { recursive: true });
+  return startChatSession({ sessionId: "test-session", channel: "web" });
 });
 
 afterEach(() => {
@@ -54,6 +57,46 @@ describe("propose_automation", () => {
     expect(automations).toHaveLength(1);
     expect(automations[0].status).toBe("draft");
     expect(automations[0].stepCount).toBe(1);
+  });
+
+  it("mints a secret for a webhook draft instead of accepting model text", async () => {
+    await proposeAutomation.execute(
+      { name: "Lead webhook", trigger: "webhook", triggerValue: "not-a-secret", channel: "all", steps: [] },
+      fakeCtx,
+    );
+    const { automations } = await listAutomationsTool.execute({}, fakeCtx);
+    expect(automations[0]?.trigger).toBe("webhook");
+    expect(automations[0]?.triggerValue).toMatch(/^[0-9a-f]{48}$/);
+    expect(automations[0]?.triggerValue).not.toBe("not-a-secret");
+  });
+});
+
+describe("propose_agent", () => {
+  it("creates a complete draft without activating or assigning it", async () => {
+    const result = await proposeAgent.execute({
+      name: "Ventas iniciales",
+      description: "Responde primeras consultas de ventas.",
+      role: "Asesor de ventas",
+      goal: "Entender necesidad y calificar la consulta.",
+      audience: "Personas que preguntan por primera vez.",
+      tone: "Cercano y claro",
+      language: "auto",
+      greeting: "Hola, ¿en qué te ayudo?",
+      rules: ["Confirmá la necesidad antes de recomendar."],
+      avoid: ["No prometas descuentos."],
+      handoff: "Pasar a una persona cuando pide descuento o contrato.",
+      capabilities: ["knowledge", "contacts"],
+    }, fakeCtx);
+
+    expect(result).toMatchObject({ name: "Ventas iniciales", status: "draft", href: expect.stringMatching(/^\/agents\//) });
+    const [agent] = await listAgents();
+    expect(agent).toMatchObject({
+      id: result.id,
+      status: "draft",
+      tools: expect.arrayContaining(["handoff", "knowledge", "contacts"]),
+      brief: { role: "Asesor de ventas" },
+    });
+    expect(agent?.systemPrompt).toContain("Asesor de ventas");
   });
 });
 

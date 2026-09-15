@@ -2,7 +2,9 @@ import { generateObject } from "ai";
 import { z } from "zod";
 import { assertPublicHttpsUrl } from "./http-guard";
 import { stripMarkup, tidy } from "./rag";
-import { languageModelForTask } from "./task-model";
+import { modelIdForTask } from "./task-model";
+import { resolveLanguageModel } from "./ai-provider";
+import { recordAiUsage } from "./ai-meter";
 import { listDocuments } from "./knowledge-store";
 import type { BusinessProfileRecord } from "./business-profile-store";
 
@@ -143,12 +145,18 @@ export async function analyzeBusiness(input: BusinessAnalysisInput): Promise<Bus
   ].join("\n");
 
   try {
+    const modelId = await modelIdForTask("agent_design");
     const result = await generateObject({
-      model: await languageModelForTask("agent_design"),
+      model: resolveLanguageModel(modelId),
       schema: businessProfileSchema,
       system,
       prompt: sections.join("\n\n---\n\n"),
       abortSignal: AbortSignal.timeout(60_000),
+    });
+    await recordAiUsage({
+      model: modelId,
+      usage: result.usage,
+      conversationId: "business-profile",
     });
 
     const record: BusinessProfileRecord = {

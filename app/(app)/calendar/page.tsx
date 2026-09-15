@@ -1,511 +1,478 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { HugeiconsIcon } from "@/components/icons/icon";
-import {
-  Calendar03Icon,
-  Clock01Icon,
-  ExternalLinkIcon,
-  UserGroup02Icon,
-  ArrowLeft02Icon,
-  ArrowRight02Icon,
-  Video01Icon,
-} from "@hugeicons/core-free-icons";
+import { Add01Icon, ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { GoogleMark } from "@/app/landing/_components/brand-marks";
-import { PageContainer } from "../../_components/page-container";
-import { Card, CardHeader, CardTitle, CardDescription, CardSeparator } from "../../_components/dashboard-card";
-import { KpiCard } from "../../_components/kpi-card";
-import { CardCarousel } from "../../_components/card-carousel";
-import { Skeleton, SkeletonBar } from "@/components/ai-elements/skeleton";
+import { Card } from "../../_components/dashboard-card";
+import { SlidingTabs } from "@/components/ai-elements/sliding-tabs";
+import { SkeletonBar } from "@/components/ai-elements/skeleton";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { Button } from "@/components/ui/button";
+import { useConfirmDialog } from "@/components/confirm-dialog";
+import { useToast } from "@/components/toast-provider";
 import { useI18n } from "@/lib/i18n/provider";
-import { fetchJson, isApiError, type UiError } from "@/lib/api-error-message";
-import { fullTime, timeUntil } from "@/lib/format";
+import { fetchJson, isApiError, uiErrorMessage, type UiError } from "@/lib/api-error-message";
+import { usePolling } from "@/lib/use-polling";
 import { cn } from "@/lib/utils";
-import type { UpcomingEvent } from "@/lib/calendar";
+import type { EventInput, UpcomingEvent } from "@/lib/calendar";
+import styles from "./_components/calendar.module.css";
+import {
+  WEEK_START,
+  addDays,
+  capitalizeFirst,
+  dayKey,
+  draftFromEvent,
+  eventBounds,
+  shiftAnchor,
+  startOfDay,
+  viewDays,
+  type CalendarView,
+  type EditorDraft,
+} from "./_components/calendar-utils";
+import { DayAgenda } from "./_components/day-agenda";
+import { EventEditor } from "./_components/event-editor";
+import { IconNavButton, MiniMonth } from "./_components/mini-month";
+import { MonthView } from "./_components/month-view";
+import { TimeGrid } from "./_components/time-grid";
 
 // Calendar.
 //
-// A read-only window onto the Google Calendar the agent already books into —
-// see the `calendar` tool's `book_event` action, and anyone booking straight
-// in Google Calendar. Nothing here writes: booking stays the agent's job (or
-// Google's own UI), this page is just "what's coming up" for the operator,
-// drawn as a real month grid rather than a bare list.
+// The Google Calendar the agent already books into — see the `calendar`
+// tool's `book_event` action — and now one the operator writes into too.
+// Shaped after Apple's Calendar: a day, week and month view under one
+// toolbar, a small month and the selected day's agenda beside them, and
+// events made by dragging across the hours. Every write goes straight to
+// Google, so what is on this screen is what the agent sees when it checks
+// availability.
 
-type Locale = "es" | "en";
+const VIEW_KEY = "senka:calendar-view";
+/** The agent books from conversations while this page is open. */
+const REFRESH_MS = 60_000;
 
-/** Spanish weeks read Monday-first; English ones read Sunday-first. */
-const WEEK_START: Record<Locale, number> = { es: 1, en: 0 };
-
-function startOfDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
-
-function addDays(date: Date, days: number): Date {
-  const next = new Date(date);
-  next.setDate(next.getDate() + days);
-  return next;
-}
-
-/** Local `YYYY-MM-DD`, not `toISOString().slice(0, 10)` — that one reads back
- *  in UTC and slides a late-evening event onto the wrong day for anyone west
- *  of Greenwich. */
-function dayKey(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
-
-/** An all-day event's `start` is already a bare date with no time zone to
- *  misread; a timed one has to go through `Date` to land on the viewer's
- *  own calendar day. */
-function eventDayKey(event: UpcomingEvent): string {
-  return event.allDay ? event.start.slice(0, 10) : dayKey(new Date(event.start));
-}
-
-/** The 42 cells of a month grid: full weeks only, so the grid never grows or
- *  shrinks a row as someone pages between months. */
-function buildMonthGrid(viewDate: Date, weekStart: number): Date[] {
-  const first = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1);
-  const offset = (first.getDay() - weekStart + 7) % 7;
-  const gridStart = addDays(first, -offset);
-  return Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
-}
-
-function weekdayLabels(weekStart: number, locale: Locale): string[] {
-  // 2024-01-07 is a Sunday — a fixed anchor to read weekday names off of,
-  // in whatever order this locale's grid wants them.
-  const sunday = new Date(2024, 0, 7);
-  return Array.from({ length: 7 }, (_, i) =>
-    addDays(sunday, (weekStart + i) % 7).toLocaleDateString(locale, { weekday: "short" }),
-  );
+function useIsNarrow(): boolean {
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 767px)");
+    const update = () => setNarrow(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+  return narrow;
 }
 
 export default function CalendarPage() {
   const { t, locale } = useI18n();
+  const { toast } = useToast();
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const weekStart = WEEK_START[locale];
+  const narrow = useIsNarrow();
 
-  const [viewDate, setViewDate] = useState(() => startOfDay(new Date()));
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
-
-  const [overview, setOverview] = useState<UpcomingEvent[] | null>(null);
-  const [gridEvents, setGridEvents] = useState<UpcomingEvent[] | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [gridLoading, setGridLoading] = useState(false);
+  const [view, setView] = useState<CalendarView>("month");
+  const [anchor, setAnchor] = useState(() => startOfDay(new Date()));
+  const [now, setNow] = useState(() => new Date());
+  const [events, setEvents] = useState<UpcomingEvent[] | null>(null);
+  const [rangeLoading, setRangeLoading] = useState(false);
   const [notConfigured, setNotConfigured] = useState(false);
   const [error, setError] = useState<UiError | null>(null);
-
-  const gridDays = useMemo(() => buildMonthGrid(viewDate, weekStart), [viewDate, weekStart]);
-
-  const fetchEvents = useCallback(
-    (start: Date, end: Date) => {
-      const params = new URLSearchParams({ start: start.toISOString(), end: end.toISOString() });
-      return fetchJson<{ events?: UpcomingEvent[] }>(`/api/calendar/events?${params}`, t);
-    },
-    [t],
-  );
-
-  // A fixed 30-day window, independent of whatever month is on screen, so
-  // the stat tiles keep answering "what's actually next" while someone pages
-  // the grid off into some other month.
-  const loadOverview = useCallback(async () => {
-    const now = startOfDay(new Date());
-    const result = await fetchEvents(now, addDays(now, 30));
-    setLoading(false);
-    if (!result.ok) {
-      if (isApiError(result.error) && result.error.code === "not_configured") {
-        setNotConfigured(true);
-        setError(null);
-      } else {
-        setNotConfigured(false);
-        setError(result.error);
-      }
-      return false;
-    }
-    setNotConfigured(false);
-    setError(null);
-    setOverview(result.data.events ?? []);
-    return true;
-  }, [fetchEvents]);
-
-  const loadGrid = useCallback(async () => {
-    setGridLoading(true);
-    const result = await fetchEvents(gridDays[0], addDays(gridDays[41], 1));
-    setGridLoading(false);
-    if (!result.ok) {
-      if (!(isApiError(result.error) && result.error.code === "not_configured")) setError(result.error);
-      return;
-    }
-    setGridEvents(result.data.events ?? []);
-  }, [fetchEvents, gridDays]);
+  const [editor, setEditor] = useState<{ open: boolean; draft: EditorDraft | null; nonce: number }>({
+    open: false,
+    draft: null,
+    nonce: 0,
+  });
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    void (async () => {
-      if (await loadOverview()) void loadGrid();
-    })();
-    // Only on mount: the grid effect below handles every later navigation.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    try {
+      const stored = localStorage.getItem(VIEW_KEY);
+      if (stored === "day" || stored === "week" || stored === "month") setView(stored);
+    } catch {
+      // Private mode — month is a fine place to start.
+    }
   }, []);
 
-  useEffect(() => {
-    if (overview === null) return; // still waiting on the first load above
-    void loadGrid();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewDate]);
-
-  const eventsByDay = useMemo(() => {
-    const map = new Map<string, UpcomingEvent[]>();
-    for (const event of gridEvents ?? []) {
-      const key = eventDayKey(event);
-      const list = map.get(key);
-      if (list) list.push(event);
-      else map.set(key, [event]);
+  const changeView = useCallback((next: CalendarView) => {
+    setView(next);
+    try {
+      localStorage.setItem(VIEW_KEY, next);
+    } catch {
+      // Best-effort.
     }
-    return map;
-  }, [gridEvents]);
+  }, []);
 
-  const todayKey = dayKey(new Date());
+  // The now line and "today" have to move on their own if the page stays open.
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(timer);
+  }, []);
 
-  const stats = useMemo(() => {
-    const events = overview ?? [];
-    const now = new Date();
-    const weekEnd = addDays(startOfDay(now), 7);
-    const todayCount = events.filter((e) => eventDayKey(e) === todayKey).length;
-    const weekCount = events.filter((e) => new Date(e.allDay ? `${e.start}T00:00:00` : e.start) < weekEnd).length;
-    const next = events.find((e) => new Date(e.allDay ? `${e.start}T23:59:59` : e.start) >= now);
-    return { todayCount, weekCount, next };
-  }, [overview, todayKey]);
+  // A phone has no room for seven columns of hours: its week is a day.
+  const effectiveView: CalendarView = narrow && view === "week" ? "day" : view;
+  const days = useMemo(() => viewDays(effectiveView, anchor, weekStart), [effectiveView, anchor, weekStart]);
+  const range = useMemo(() => {
+    const start = days[0] ?? anchor;
+    const end = addDays(days[days.length - 1] ?? anchor, 1);
+    return { start, end, key: `${dayKey(start)}_${dayKey(end)}` };
+  }, [days, anchor]);
 
-  const monthLabel = viewDate.toLocaleDateString(locale, { month: "long", year: "numeric" });
-  const labels = useMemo(() => weekdayLabels(weekStart, locale), [weekStart, locale]);
+  const requestId = useRef(0);
+  const loadRange = useCallback(
+    async (quiet = false) => {
+      requestId.current += 1;
+      const id = requestId.current;
+      if (!quiet) setRangeLoading(true);
+      const params = new URLSearchParams({ start: range.start.toISOString(), end: range.end.toISOString() });
+      const result = await fetchJson<{ events?: UpcomingEvent[] }>(`/api/calendar/events?${params}`, t);
+      // Paging fast fires several of these; only the newest gets to draw.
+      if (id !== requestId.current) return;
+      setRangeLoading(false);
+      if (!result.ok) {
+        if (isApiError(result.error) && result.error.code === "not_configured") {
+          setNotConfigured(true);
+          setError(null);
+          setEvents([]);
+          return;
+        }
+        if (!quiet) setError(result.error);
+        setEvents((current) => current ?? []);
+        return;
+      }
+      setNotConfigured(false);
+      setError(null);
+      setEvents(result.data.events ?? []);
+    },
+    // `range.key` stands for the range; the dates themselves are rebuilt each render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [range.key, t],
+  );
 
-  const dayList = selectedDay
-    ? (eventsByDay.get(selectedDay) ?? [])
-    : Array.from(eventsByDay.entries())
-        .sort(([a], [b]) => (a < b ? -1 : 1))
-        .flatMap(([, events]) => events);
+  useEffect(() => {
+    void loadRange();
+  }, [loadRange]);
 
-  const emptyState = !loading && !notConfigured && !error && (overview ?? []).length === 0;
+  // Skipped rather than disabled while the editor is open: `usePolling` ticks
+  // the moment it is re-enabled, which refetched right on top of every save.
+  usePolling(
+    () => {
+      if (events !== null && !editor.open && !saving) void loadRange(true);
+    },
+    REFRESH_MS,
+    !notConfigured,
+  );
+
+  const eventList = events ?? [];
+  const todayKey = dayKey(now);
+
+  const eventDays = useMemo(() => {
+    const keys = new Set<string>();
+    for (const event of events ?? []) {
+      const { start, end } = eventBounds(event);
+      let day = startOfDay(start);
+      for (let i = 0; day < end && i < 62; i += 1) {
+        keys.add(dayKey(day));
+        day = addDays(day, 1);
+      }
+    }
+    return keys;
+  }, [events]);
+
+  const heading = useMemo(() => {
+    if (effectiveView === "day") {
+      return {
+        main: anchor.toLocaleDateString(locale, { day: "numeric", month: "long" }),
+        sub: String(anchor.getFullYear()),
+        caption: anchor.toLocaleDateString(locale, { weekday: "long" }),
+      };
+    }
+    const first = days[0] ?? anchor;
+    const last = days[days.length - 1] ?? anchor;
+    if (effectiveView === "week" && first.getMonth() !== last.getMonth()) {
+      const short = (date: Date) => date.toLocaleDateString(locale, { month: "short" }).replace(".", "");
+      return { main: `${short(first)} – ${short(last)}`, sub: String(last.getFullYear()), caption: null };
+    }
+    return {
+      main: anchor.toLocaleDateString(locale, { month: "long" }),
+      sub: String(anchor.getFullYear()),
+      caption: null,
+    };
+  }, [effectiveView, anchor, days, locale]);
+
+  const goToday = () => setAnchor(startOfDay(new Date()));
+  const step = (direction: -1 | 1) => setAnchor((current) => shiftAnchor(effectiveView, current, direction));
+  const selectDay = (date: Date) => setAnchor(startOfDay(date));
+  const showDay = (date: Date) => {
+    setAnchor(startOfDay(date));
+    changeView("day");
+  };
+
+  const openDraft = (draft: EditorDraft) =>
+    setEditor((current) => ({ open: true, draft, nonce: current.nonce + 1 }));
+
+  /** The toolbar's "+": an hour on the selected day, starting at the next
+   *  whole hour — the slot someone reaching for "new event" usually means. */
+  const newEvent = () => {
+    const start = new Date(anchor);
+    start.setHours(Math.min(new Date().getHours() + 1, 23), 0, 0, 0);
+    openDraft({ start, end: new Date(start.getTime() + 60 * 60_000), allDay: false });
+  };
+
+  const newAllDay = (date: Date) => {
+    const start = startOfDay(date);
+    openDraft({ start, end: addDays(start, 1), allDay: true });
+  };
+
+  const openEvent = (event: UpcomingEvent) => openDraft(draftFromEvent(event));
+
+  const save = async (input: EventInput, id?: string) => {
+    setSaving(true);
+    const result = await fetchJson<{ event: UpcomingEvent }>(
+      id ? `/api/calendar/events/${encodeURIComponent(id)}` : "/api/calendar/events",
+      t,
+      {
+        method: id ? "PATCH" : "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(input),
+      },
+    );
+    setSaving(false);
+    if (!result.ok) {
+      toast({ title: uiErrorMessage(t, result.error), status: "error" });
+      return;
+    }
+    const saved = result.data.event;
+    setEvents((current) => [...(current ?? []).filter((event) => event.id !== saved.id), saved]);
+    setEditor((current) => ({ ...current, open: false }));
+    toast({ title: id ? t("calendar.updated") : t("calendar.created"), status: "success" });
+  };
+
+  const remove = async (event: UpcomingEvent) => {
+    const ok = await confirm({
+      title: t("calendar.deleteConfirm", { name: event.summary || t("calendar.untitled") }),
+      description: t("calendar.deleteConfirmBody"),
+      confirmLabel: t("calendar.delete"),
+    });
+    if (!ok) return;
+    setSaving(true);
+    const result = await fetchJson(`/api/calendar/events/${encodeURIComponent(event.id)}`, t, {
+      method: "DELETE",
+    });
+    setSaving(false);
+    if (!result.ok) {
+      toast({ title: uiErrorMessage(t, result.error), status: "error" });
+      return;
+    }
+    setEvents((current) => (current ?? []).filter((entry) => entry.id !== event.id));
+    setEditor((current) => ({ ...current, open: false }));
+    toast({ title: t("calendar.deleted"), status: "success" });
+  };
+
+  // Calendar keys: ← → page, T today, N new event, D / W / M switch view.
+  // Registered every render so the handlers always see the current anchor.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) return;
+      if (editor.open || document.querySelector("[role=dialog],[role=alertdialog]")) return;
+      if (notConfigured) return;
+      const actions: Record<string, () => void> = {
+        ArrowLeft: () => step(-1),
+        ArrowRight: () => step(1),
+        t: goToday,
+        n: newEvent,
+        d: () => changeView("day"),
+        w: () => changeView("week"),
+        m: () => changeView("month"),
+      };
+      const action = actions[event.key];
+      if (!action) return;
+      event.preventDefault();
+      action();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  });
+
+  const initialLoading = events === null && !notConfigured && !error;
+  const viewTabs = [
+    { id: "day", label: t("calendar.viewDay") },
+    ...(narrow ? [] : [{ id: "week", label: t("calendar.viewWeek") }]),
+    { id: "month", label: t("calendar.viewMonth") },
+  ];
 
   return (
-    <PageContainer maxWidth="max-w-[1400px]" pattern="grid">
-      <Skeleton className="min-h-[500px]" isLoading={loading} skeleton={<CalendarSkeleton />}>
-        <div className="content-enter">
-          <header className="mb-6">
-            <h1 className="text-2xl font-semibold">{t("calendar.title")}</h1>
-            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{t("calendar.subtitle")}</p>
-          </header>
+    <div className={cn(styles.root, "content-enter flex h-full min-h-0 flex-col overflow-hidden")}>
+      <header className="shrink-0 border-b border-border bg-card/40 backdrop-blur-sm">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5 sm:px-4">
+          <h1 className="min-w-0 flex-1 truncate text-xl leading-8 font-semibold tracking-tight">
+            <span>{capitalizeFirst(heading.main)}</span>{" "}
+            <span className="font-normal text-muted-foreground">{heading.sub}</span>
+            {heading.caption ? (
+              <span className="ml-2 hidden text-sm font-normal text-muted-foreground capitalize sm:inline">
+                {heading.caption}
+              </span>
+            ) : null}
+          </h1>
 
-          {error ? (
-            <ErrorBanner
-              className="mb-6"
-              error={error}
-              onRetry={() => void loadOverview().then((ok) => { if (ok) void loadGrid(); })}
-              onDismiss={() => setError(null)}
+          <div className="order-last w-full sm:order-none sm:w-auto">
+            <SlidingTabs
+              value={effectiveView}
+              onValueChange={(id) => changeView(id as CalendarView)}
+              tabs={viewTabs}
             />
-          ) : null}
+          </div>
 
-          {notConfigured ? (
-            <Card>
-              <div className="flex flex-col items-center gap-3 px-5 py-16 text-center">
-                <div className="flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground shadow-[var(--shadow-inset)]">
-                  <GoogleMark size={20} />
-                </div>
-                <div>
-                  <p className="text-sm font-medium">{t("calendar.notConnectedTitle")}</p>
-                  <p className="max-w-xs text-xs text-muted-foreground">{t("calendar.notConnectedDescription")}</p>
-                </div>
-                <Button asChild size="sm" variant="secondary">
-                  <Link href="/connections">
-                    {t("calendar.goToConnections")}
-                  </Link>
-                </Button>
-              </div>
-            </Card>
-          ) : (
-            <>
-              {/* Stat tiles — always "as of right now", whatever month the
-                  grid below happens to be showing. */}
-              <CardCarousel label="Estadísticas de calendario">
-                <div className="mb-6 flex items-stretch gap-4" style={{ paddingInline: "2px" }}>
-                  <div className="min-w-[220px] flex-1">
-                    <KpiCard
-                      icon={Calendar03Icon}
-                      label={t("calendar.today")}
-                      value={stats.todayCount}
-                      sub={stats.todayCount > 0 ? t("calendar.todaySub") : t("calendar.todaySubNone")}
-                    />
-                  </div>
-                  <div className="min-w-[220px] flex-1">
-                    <KpiCard
-                      icon={Clock01Icon}
-                      label={t("calendar.thisWeek")}
-                      value={stats.weekCount}
-                      sub={stats.weekCount > 0 ? t("calendar.thisWeekSub") : t("calendar.thisWeekSubNone")}
-                    />
-                  </div>
-                  <div className="min-w-[220px] flex-1">
-                    <KpiCard
-                      icon={ArrowRight02Icon}
-                      label={t("calendar.nextEvent")}
-                      value={stats.next ? timeUntil(stats.next.start, locale) : "—"}
-                      sub={stats.next ? stats.next.summary || t("calendar.untitled") : t("calendar.nextEventNone")}
-                    />
-                  </div>
-                </div>
-              </CardCarousel>
+          <div className="flex items-center gap-0.5">
+            <IconNavButton label={t("calendar.previous")} icon={ArrowLeft01Icon} onClick={() => step(-1)} />
+            <Button variant="outline" size="sm" onClick={goToday}>
+              {t("calendar.today")}
+            </Button>
+            <IconNavButton label={t("calendar.next")} icon={ArrowRight01Icon} onClick={() => step(1)} />
+          </div>
 
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_380px] lg:items-start">
-                <Card>
-                  <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
-                    <p className="text-sm font-medium capitalize">{monthLabel}</p>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedDay(null);
-                          setViewDate(startOfDay(new Date()));
-                        }}
-                      >
-                        {t("calendar.today")}
-                      </Button>
-                      <button
-                        type="button"
-                        aria-label={t("calendar.prevMonth")}
-                        onClick={() => setViewDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
-                        className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                      >
-                        <HugeiconsIcon icon={ArrowLeft02Icon} size={16} strokeWidth={1.75} />
-                      </button>
-                      <button
-                        type="button"
-                        aria-label={t("calendar.nextMonth")}
-                        onClick={() => setViewDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
-                        className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                      >
-                        <HugeiconsIcon icon={ArrowRight02Icon} size={16} strokeWidth={1.75} />
-                      </button>
-                    </div>
-                  </div>
-                  <CardSeparator />
-                  <div className={cn("overflow-x-auto p-3", gridLoading && "opacity-60")}>
-                    <div className="min-w-[280px]">
-                    <div className="grid grid-cols-7 gap-1 px-2 pb-1">
-                      {labels.map((label, i) => (
-                        <div key={i} className="text-center text-[11px] font-medium text-muted-foreground uppercase">
-                          {label}
-                        </div>
-                      ))}
-                    </div>
-                    <div className="grid grid-cols-7 gap-1">
-                      {gridDays.map((date) => {
-                        const key = dayKey(date);
-                        const inMonth = date.getMonth() === viewDate.getMonth();
-                        const isToday = key === todayKey;
-                        const isSelected = key === selectedDay;
-                        const dayEvents = eventsByDay.get(key) ?? [];
-                        return (
-                          <button
-                            key={key}
-                            type="button"
-                            onClick={() => setSelectedDay(isSelected ? null : key)}
-                            className={cn(
-                              "flex aspect-square flex-col items-center justify-start gap-1 rounded-lg px-1 py-1.5 text-xs transition-colors",
-                              inMonth ? "text-foreground" : "text-muted-foreground",
-                              isSelected ? "bg-accent" : "hover:bg-accent/50",
-                              isToday && !isSelected && "bg-primary/8",
-                            )}
-                          >
-                            <span className={cn("tabular-nums", isToday && "font-semibold")}>{date.getDate()}</span>
-                            {dayEvents.length > 0 ? (
-                              <span className="flex items-center gap-0.5">
-                                {dayEvents.slice(0, 3).map((_, i) => (
-                                  <span key={i} className="size-1 rounded-full bg-foreground/60" />
-                                ))}
-                                {dayEvents.length > 3 ? (
-                                  <span className="text-[9px] text-muted-foreground">+{dayEvents.length - 3}</span>
-                                ) : null}
-                              </span>
-                            ) : null}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    </div>
-                  </div>
-                </Card>
-
-                <section className="lg:sticky lg:top-6">
-                  <div className="mb-3 flex items-center justify-between">
-                    <h2 className="text-sm font-medium text-muted-foreground">
-                      {selectedDay
-                        ? new Date(`${selectedDay}T00:00:00`).toLocaleDateString(locale, {
-                            weekday: "long",
-                            day: "numeric",
-                            month: "long",
-                          })
-                        : t("calendar.upcomingInView")}
-                    </h2>
-                    {selectedDay ? (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedDay(null)}
-                        className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-                      >
-                        {t("calendar.clearSelection")}
-                      </button>
-                    ) : null}
-                  </div>
-                  {emptyState && dayList.length === 0 ? (
-                    <Card>
-                      <div className="flex flex-col items-center gap-3 px-5 py-12 text-center">
-                        <div className="flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground shadow-[var(--shadow-inset)]">
-                          <HugeiconsIcon icon={Calendar03Icon} size={20} strokeWidth={1.75} />
-                        </div>
-                        <p className="text-sm font-medium">{t("calendar.emptyTitle")}</p>
-                        <p className="max-w-xs text-xs text-muted-foreground">{t("calendar.emptyDescription")}</p>
-                      </div>
-                    </Card>
-                  ) : dayList.length === 0 ? (
-                    <p className="px-1 text-sm text-muted-foreground">{t("calendar.noEventsThatDay")}</p>
-                  ) : (
-                    <div className="max-h-[60vh] space-y-3 overflow-y-auto pr-0.5 lg:max-h-[calc(100vh-320px)]">
-                      {dayList.map((event) => (
-                        <EventRow key={event.id || `${eventDayKey(event)}-${event.start}`} event={event} t={t} locale={locale} />
-                      ))}
-                    </div>
-                  )}
-                </section>
-              </div>
-            </>
-          )}
+          <Button size="sm" onClick={newEvent} disabled={notConfigured} aria-label={t("calendar.newEvent")}>
+            <HugeiconsIcon icon={Add01Icon} size={14} strokeWidth={1.75} />
+            <span className="hidden sm:inline">{t("calendar.newEvent")}</span>
+          </Button>
         </div>
-      </Skeleton>
-    </PageContainer>
-  );
-}
 
-function EventRow({
-  event,
-  locale,
-  t,
-}: {
-  readonly event: UpcomingEvent;
-  readonly locale: Locale;
-  readonly t: (key: string, params?: Record<string, string | number>) => string;
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent text-foreground shadow-[var(--shadow-inset)]">
-          <HugeiconsIcon icon={Calendar03Icon} size={16} strokeWidth={1.75} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <CardTitle className="truncate">{event.summary || t("calendar.untitled")}</CardTitle>
-          <CardDescription>{event.allDay ? t("calendar.allDay") : fullTime(event.start, locale)}</CardDescription>
-        </div>
-        {event.link ? (
-          <a
-            href={event.link}
-            target="_blank"
-            rel="noreferrer noopener"
-            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground"
-            aria-label={t("calendar.openInGoogle")}
-          >
-            <HugeiconsIcon icon={ExternalLinkIcon} size={15} strokeWidth={1.75} />
-          </a>
+        {error ? (
+          <ErrorBanner
+            className="rounded-none border-x-0 border-t shadow-none"
+            error={error}
+            onRetry={() => void loadRange()}
+            onDismiss={() => setError(null)}
+          />
         ) : null}
-      </CardHeader>
+      </header>
 
-      {!event.allDay || event.attendees.length > 0 || event.meetLink ? (
-        <>
-          <CardSeparator />
-          <div className="flex flex-wrap items-center gap-4 px-5 py-3 text-xs text-muted-foreground">
-            {!event.allDay ? (
-              <span className="inline-flex items-center gap-1.5">
-                <HugeiconsIcon icon={Clock01Icon} size={14} strokeWidth={1.75} />
-                {timeUntil(event.start, locale)}
-              </span>
-            ) : null}
-            {event.meetLink ? (
-              <a
-                href={event.meetLink}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="inline-flex items-center gap-1.5 font-medium text-foreground transition-colors hover:underline"
-              >
-                <HugeiconsIcon icon={Video01Icon} size={14} strokeWidth={1.75} />
-                {t("calendar.joinMeet")}
-              </a>
-            ) : null}
-            {event.attendees.length > 0 ? (
-              <span className="inline-flex min-w-0 items-center gap-1.5">
-                <HugeiconsIcon icon={UserGroup02Icon} size={14} strokeWidth={1.75} className="shrink-0" />
-                <span className="truncate">{event.attendees.join(", ")}</span>
-              </span>
-            ) : null}
+      {notConfigured ? (
+        <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto p-6">
+          <Card className="w-full max-w-md">
+            <div className="flex flex-col items-center gap-3 px-5 py-16 text-center">
+              <div className="flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground shadow-[var(--shadow-inset)]">
+                <GoogleMark size={20} />
+              </div>
+              <div>
+                <p className="text-sm font-medium">{t("calendar.notConnectedTitle")}</p>
+                <p className="max-w-xs text-xs text-muted-foreground">{t("calendar.notConnectedDescription")}</p>
+              </div>
+              <Button asChild size="sm" variant="secondary">
+                <Link href="/connections">{t("calendar.goToConnections")}</Link>
+              </Button>
+            </div>
+          </Card>
+        </div>
+      ) : (
+        <div className="flex min-h-0 flex-1">
+          <aside className="hidden w-64 shrink-0 flex-col gap-6 overflow-y-auto border-r border-border bg-card/30 p-4 lg:flex xl:w-72">
+            <MiniMonth
+              selected={anchor}
+              weekStart={weekStart}
+              locale={locale}
+              todayKey={todayKey}
+              eventDays={eventDays}
+              onSelect={selectDay}
+            />
+            <DayAgenda
+              day={anchor}
+              events={eventList}
+              locale={locale}
+              onOpenEvent={openEvent}
+              onCreate={newEvent}
+            />
+            <p className="mt-auto px-1 text-[11px] leading-relaxed text-muted-foreground">
+              {t("calendar.createHint")}
+            </p>
+          </aside>
+
+          <div
+            className={cn(
+              "relative min-w-0 flex-1 transition-opacity duration-200",
+              rangeLoading && !initialLoading && "opacity-70",
+            )}
+            aria-busy={rangeLoading || undefined}
+          >
+            {initialLoading ? (
+              <GridSkeleton />
+            ) : effectiveView === "month" ? (
+              narrow ? (
+                <div className="h-full overflow-y-auto">
+                  <MonthView
+                    compact
+                    anchor={anchor}
+                    weekStart={weekStart}
+                    locale={locale}
+                    events={eventList}
+                    todayKey={todayKey}
+                    onSelectDay={selectDay}
+                    onCreateOnDay={newAllDay}
+                    onOpenEvent={openEvent}
+                    onShowDay={showDay}
+                  />
+                  <div className="p-4">
+                    <DayAgenda
+                      day={anchor}
+                      events={eventList}
+                      locale={locale}
+                      onOpenEvent={openEvent}
+                      onCreate={newEvent}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <MonthView
+                  anchor={anchor}
+                  weekStart={weekStart}
+                  locale={locale}
+                  events={eventList}
+                  todayKey={todayKey}
+                  onSelectDay={selectDay}
+                  onCreateOnDay={newAllDay}
+                  onOpenEvent={openEvent}
+                  onShowDay={showDay}
+                />
+              )
+            ) : (
+              <TimeGrid
+                key={effectiveView}
+                days={days}
+                locale={locale}
+                events={eventList}
+                now={now}
+                onCreate={openDraft}
+                onOpenEvent={openEvent}
+                onShowDay={showDay}
+              />
+            )}
           </div>
-        </>
-      ) : null}
-    </Card>
+        </div>
+      )}
+
+      <EventEditor
+        key={editor.nonce}
+        open={editor.open}
+        onOpenChange={(open) => setEditor((current) => ({ ...current, open }))}
+        draft={editor.draft}
+        saving={saving}
+        onSave={(input, id) => void save(input, id)}
+        onDelete={(event) => void remove(event)}
+      />
+      {confirmDialog}
+    </div>
   );
 }
 
-function CalendarSkeleton() {
+function GridSkeleton() {
   return (
-    <div>
-      <div className="mb-6 space-y-2">
-        <SkeletonBar className="h-7 w-40" />
-        <SkeletonBar className="h-4 w-96 max-w-full" />
-      </div>
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="rounded-xl border border-border bg-card p-5 shadow-[var(--shadow-soft)]">
-            <SkeletonBar className="h-7 w-12" />
-            <SkeletonBar className="mt-2 h-3 w-28" />
-          </div>
-        ))}
-      </div>
-      {/* Two-column: month grid + upcoming sidebar, matching the real layout */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_380px]">
-        <div className="rounded-xl border border-border bg-card p-3">
-          <div className="flex flex-wrap items-center justify-between px-2 pb-3">
-            <SkeletonBar className="h-4 w-32" />
-            <div className="flex gap-1">
-              <SkeletonBar className="size-8 rounded-lg" />
-              <SkeletonBar className="size-8 rounded-lg" />
-              <SkeletonBar className="size-8 rounded-lg" />
-            </div>
-          </div>
-          <div className="overflow-x-auto">
-            <div className="min-w-[280px]">
-              <div className="grid grid-cols-7 gap-1">
-                {Array.from({ length: 35 }).map((_, i) => (
-                  <SkeletonBar key={i} className="aspect-square rounded-lg" />
-                ))}
-              </div>
-            </div>
-          </div>
+    <div className="grid h-full grid-cols-7 grid-rows-6 gap-px p-px">
+      {Array.from({ length: 42 }).map((_, i) => (
+        <div key={i} className="flex justify-end p-1.5">
+          <SkeletonBar className="size-5 rounded-full" />
         </div>
-        <div className="space-y-3">
-          <SkeletonBar className="h-4 w-32" />
-          {[0, 1].map((i) => (
-            <Card key={i}>
-              <div className="flex items-center gap-3 px-5 py-5">
-                <SkeletonBar className="size-9 shrink-0 rounded-xl" />
-                <div className="min-w-0 flex-1 space-y-2">
-                  <SkeletonBar className="h-3.5" width="65%" />
-                  <SkeletonBar className="h-3" width="40%" />
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      </div>
+      ))}
     </div>
   );
 }

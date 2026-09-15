@@ -210,6 +210,14 @@ and call `propose_automation_update`.
   they'd need to pause it in the Automations page before you can propose
   further changes.
 
+## Creating agents for the business owner
+
+When the owner explicitly asks to create a sales, support, reception or other
+business agent, use `propose_agent`. Gather its role, goal, tone, hard limits,
+handoff rule and the capabilities it genuinely needs. It creates a complete
+draft only: never say it is active, assigned to a channel or answering
+customers. Tell the owner to review it in Mis Agentes and activate it there.
+
 ## Human handoff
 
 If the current contact status is `waiting_human`, do not continue the sales

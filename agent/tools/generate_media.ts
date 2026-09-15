@@ -6,7 +6,7 @@ import { generateElevenLabsSpeech, hasElevenLabsKey } from "../../lib/elevenlabs
 import { sendWhatsAppMediaBytes } from "../../lib/whatsapp-send";
 import { sendInstagramMediaBytes } from "../../lib/instagram-send";
 import { getInstallationId } from "../../lib/license/installation";
-import { billingSourceForElevenLabs, billingSourceForProvider, type BillingSource } from "../../lib/credit-gate";
+import { billingSourceForElevenLabs, billingSourceForProvider, checkCreditGate, type BillingSource } from "../../lib/credit-gate";
 import { recordUsage, type UsageType } from "../../lib/ai-usage";
 import { assertToolAllowed } from "../../lib/agent-scope";
 
@@ -117,6 +117,15 @@ export default defineTool({
       return { ok: false, status: 0, body: "No phone number on this contact yet." };
     }
 
+    // Media generation bypasses Eve's text-model step resolver, so it needs
+    // its own pre-flight credit check before asking a provider to do paid work.
+    const useElevenLabs = type === "audio" && await hasElevenLabsKey();
+    const billingSource = useElevenLabs
+      ? await billingSourceForElevenLabs()
+      : await billingSourceForProvider("gateway");
+    const gate = await checkCreditGate(billingSource);
+    if (!gate.allowed) return { ok: false, status: 0, body: gate.reason };
+
     let data: Uint8Array;
     let mimeType: string;
     try {
@@ -132,12 +141,12 @@ export default defineTool({
           usageType: "image",
           provider,
           model,
-          billingSource: await billingSourceForProvider("gateway"),
+          billingSource,
           inputTokens: result.usage?.inputTokens,
           outputTokens: result.usage?.outputTokens,
         });
       } else if (type === "audio") {
-        if (await hasElevenLabsKey()) {
+        if (useElevenLabs) {
           const speech = await generateElevenLabsSpeech({
             text: prompt,
             voice,
@@ -152,7 +161,7 @@ export default defineTool({
             usageType: "tts",
             provider: "elevenlabs",
             model: speech.modelId,
-            billingSource: await billingSourceForElevenLabs(),
+            billingSource,
             characters: speech.characters,
           });
         } else {
@@ -172,7 +181,7 @@ export default defineTool({
             usageType: "tts",
             provider,
             model,
-            billingSource: await billingSourceForProvider("gateway"),
+            billingSource,
             characters: prompt.length,
           });
         }
@@ -188,7 +197,7 @@ export default defineTool({
           usageType: "video",
           provider,
           model,
-          billingSource: await billingSourceForProvider("gateway"),
+          billingSource,
         });
       }
     } catch (error) {

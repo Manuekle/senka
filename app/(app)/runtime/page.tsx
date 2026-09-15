@@ -273,6 +273,9 @@ export default function RuntimePage() {
             onValueChange={(id) => setTab(id as typeof tab)}
           />
 
+          {/* Keyed on the tab so each switch plays one short entrance
+              instead of swapping content in place. */}
+          <div key={tab} className="content-enter">
           {tab === "logs" ? (
             <LogStream
               logs={logs}
@@ -294,6 +297,7 @@ export default function RuntimePage() {
 
           {tab === "loaded" ? <LoadedPanel result={info} isLoading={isLoading} /> : null}
           {tab === "team" ? <TeamPanel /> : null}
+          </div>
         </div>
       </div>
       {confirmDialog}

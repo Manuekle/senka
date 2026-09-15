@@ -3328,6 +3328,78 @@ html.lenis body {
   }
 }
 
+/* Radix Presence waits for keyframes before unmounting a disclosure. */
+@keyframes app-disclosure-open {
+  from { height: 0; opacity: 0; }
+  to { height: var(--radix-collapsible-content-height); opacity: 1; }
+}
+@keyframes app-disclosure-close {
+  from { height: var(--radix-collapsible-content-height); opacity: 1; }
+  to { height: 0; opacity: 0; }
+}
+.app-disclosure { overflow: hidden; }
+.app-disclosure[data-state="open"] {
+  animation: app-disclosure-open 250ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.app-disclosure[data-state="closed"] {
+  animation: app-disclosure-close 250ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-disclosure { animation: none !important; }
+}
+
+/* Persistent sidebar slots let labels fade while the rail changes width.
+   A single duration also keeps padding and the header control in step. */
+.app-sidebar {
+  --sidebar-duration: 400ms;
+  --sidebar-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  transition: width var(--sidebar-duration) var(--sidebar-ease);
+}
+.app-sidebar[data-collapsed="true"] { --sidebar-duration: 350ms; }
+.app-sidebar > div,
+.app-sidebar-nav {
+  transition: padding var(--sidebar-duration) var(--sidebar-ease);
+}
+.app-sidebar-nav { padding-inline: 12px; }
+.app-sidebar[data-collapsed="true"] .app-sidebar-nav { padding-inline: 8px; }
+.app-sidebar-link {
+  gap: 12px;
+  padding-inline: 12px;
+  white-space: nowrap;
+  transition: padding var(--sidebar-duration) var(--sidebar-ease),
+    background-color 150ms ease-out, color 150ms ease-out, transform 150ms ease-out;
+}
+.app-sidebar[data-collapsed="true"] .app-sidebar-link { padding-inline: 14px; }
+.app-sidebar-label {
+  min-width: 0;
+  white-space: nowrap;
+  opacity: 1;
+  translate: 0;
+  transition: opacity 150ms ease-out 80ms, translate 250ms var(--sidebar-ease) 80ms;
+}
+.app-sidebar[data-collapsed="true"] .app-sidebar-label {
+  opacity: 0;
+  translate: -4px 0;
+  pointer-events: none;
+  transition-delay: 0ms;
+}
+.app-sidebar-brand {
+  white-space: nowrap;
+  transition: opacity 150ms ease-out 80ms;
+}
+.app-sidebar[data-collapsed="true"] .app-sidebar-brand {
+  opacity: 0;
+  transition-delay: 0ms;
+}
+.app-sidebar-toggle { right: 16px; transition: right var(--sidebar-duration) var(--sidebar-ease), background-color 150ms ease-out, color 150ms ease-out; }
+.app-sidebar[data-collapsed="true"] .app-sidebar-toggle { right: 13px; }
+.app-sidebar-group { height: 20px; flex-shrink: 0; }
+.app-sidebar-divider { opacity: 0; transition: opacity 150ms ease-out; }
+.app-sidebar[data-collapsed="true"] .app-sidebar-divider { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .app-sidebar, .app-sidebar *, .app-sidebar-nav { transition: none !important; }
+}
+
 /* ── App mobile nav bar ─────────────────────────────────────────── */
 /*
    The product's mobile header uses the same drawer system as the landing:
@@ -3343,10 +3415,10 @@ html.lenis body {
   position: relative;
   z-index: 40;
   /* Drawer timing — slightly snappier than the landing's slower hero page. */
-  --app-nav-open-dur: 380ms;
-  --app-nav-close-dur: 260ms;
-  --app-nav-ease: cubic-bezier(0.34, 1.25, 0.5, 1);
-  --app-nav-ease-close: cubic-bezier(0.4, 0, 0.2, 1);
+  --app-nav-open-dur: 400ms;
+  --app-nav-close-dur: 350ms;
+  --app-nav-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --app-nav-ease-close: var(--app-nav-ease);
   --app-nav-radius: 20px;
   --app-nav-h: 0px;
 }
@@ -3379,7 +3451,7 @@ html.lenis body {
     0 0 calc(var(--app-nav-radius) * 1.2) calc(var(--app-nav-radius) * 1.2);
   box-shadow: var(--shadow-float, 0 8px 32px oklch(0 0 0 / 0.12));
   transition:
-    border-radius var(--app-nav-open-dur) cubic-bezier(0.34, 1.56, 0.64, 1),
+    border-radius var(--app-nav-open-dur) var(--app-nav-ease),
     box-shadow    var(--app-nav-open-dur) var(--app-nav-ease);
 }
 
@@ -3423,7 +3495,7 @@ html.lenis body {
     opacity    320ms var(--lp-ease-soft, cubic-bezier(0.16, 1, 0.3, 1)),
     translate  320ms var(--lp-ease-soft, cubic-bezier(0.16, 1, 0.3, 1)),
     filter     320ms var(--lp-ease-soft, cubic-bezier(0.16, 1, 0.3, 1));
-  transition-delay: calc(var(--i) * 22ms + 50ms);
+  transition-delay: calc(min(var(--i), 6) * 22ms + 40ms);
 }
 
 @media (prefers-reduced-motion: reduce) {

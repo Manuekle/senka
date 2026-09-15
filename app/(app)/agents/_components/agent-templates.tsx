@@ -9,6 +9,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Card } from "../../../_components/dashboard-card";
+import { CardCarousel } from "../../../_components/card-carousel";
 import { AGENT_TEMPLATES, TEMPLATE_BULLETS, type AgentTemplate } from "@/lib/agent-templates";
 import { fetchJson, type UiError } from "@/lib/api-error-message";
 import { useT } from "@/lib/i18n/provider";
@@ -77,13 +78,17 @@ export function AgentTemplates({
         <p className="mt-1 text-sm text-muted-foreground">{t("agents.templatesSubtitle")}</p>
       </header>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {/* Same horizontal rail as the KPI tiles: a board of hireable agents is
+          something you browse, and a wall of cards pushed the team list off
+          the first screen on every visit. */}
+      <CardCarousel label={t("agents.templatesTitle")}>
+        <div className="flex items-stretch gap-3 pb-1" style={{ paddingInline: "2px" }}>
         {AGENT_TEMPLATES.map((template) => {
           const name = t(`agentTemplates.${template.id}.name`);
           const isHired = hiredNames.has(name.toLowerCase());
           const isHiring = hiringId === template.id;
           return (
-            <Card key={template.id} interactive className="flex flex-col">
+            <Card key={template.id} interactive className="flex w-[min(300px,80vw)] shrink-0 flex-col">
               <div className="flex flex-1 flex-col gap-4 p-5">
                 <div className="flex items-start gap-3">
                   <div
@@ -147,7 +152,7 @@ export function AgentTemplates({
 
         {/* From scratch — same board, so "none of these fits" is one click
             away instead of a hunt for the button at the top of the page. */}
-        <Card className="flex flex-col border-dashed bg-muted/20">
+        <Card className="flex w-[min(300px,80vw)] shrink-0 flex-col border-dashed bg-muted/20">
           <div className="flex flex-1 flex-col gap-4 p-5">
             <div className="flex items-start gap-3">
               <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground shadow-[var(--shadow-inset)]">
@@ -166,7 +171,8 @@ export function AgentTemplates({
             </Button>
           </div>
         </Card>
-      </div>
+        </div>
+      </CardCarousel>
     </section>
   );
 }

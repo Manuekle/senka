@@ -2,13 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({
   document: { purchases: [] as import("./workspace-billing").WorkspacePurchase[] },
-  fetch: vi.fn(), create: vi.fn(), access: vi.fn(), query: vi.fn(),
+  registry: { businesses: [] as import("./business-scope").BusinessEntry[], activeId: "default" },
+  fetch: vi.fn(), query: vi.fn(),
 }));
 vi.mock("./doc-store", () => ({ createDocumentStore: () => ({
   read: async () => structuredClone(state.document),
   update: async (fn: (store: typeof state.document) => unknown) => fn(state.document),
 }) }));
-vi.mock("./business-scope", () => ({ createBusiness: state.create, setBusinessAccess: state.access, requireBusinessDatabase: vi.fn() }));
+vi.mock("./business-scope", () => ({ requireBusinessDatabase: vi.fn() }));
 vi.mock("./stripe", () => ({ getPlatformStripeKey: () => "sk_test_fixture" }));
 vi.mock("./license/installation", () => ({ getInstallationId: async () => "installation-test" }));
 vi.mock("./billing-store", () => ({ readBillingState: async () => ({ stripeCustomerId: "cus_test" }) }));
@@ -30,7 +31,15 @@ function subscription(overrides: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks(); state.document = { purchases: [] };
-  state.query.mockResolvedValue({ rows: [] });
+  state.registry = { businesses: [{ id: "default", name: "Original", createdAt: "" }], activeId: "default" };
+  state.query.mockImplementation(async (sql: string, values: string[] = []) => {
+    if (sql.startsWith("SELECT data")) return { rows: [{ data: structuredClone(values[0] === "businesses" ? state.registry : state.document) }] };
+    if (sql.startsWith("UPDATE senka.documents")) {
+      if (values[0] === "businesses") state.registry = JSON.parse(values[1]);
+      else state.document = JSON.parse(values[1]);
+    }
+    return { rows: [] };
+  });
   vi.stubEnv("STRIPE_WORKSPACE_PRICE_ID", "price_test");
   vi.stubEnv("WORKFLOW_POSTGRES_URL", "postgres://test/never-connected");
   vi.stubGlobal("fetch", state.fetch);
@@ -56,7 +65,7 @@ describe("monthly workspace checkout", () => {
     expect(checkouts).toHaveLength(1);
     expect(checkouts[0][1].headers["Idempotency-Key"]).toContain(requestId);
     expect(checkouts[0][1].body.get("line_items[0][quantity]")).toBe("1");
-    expect(state.create).not.toHaveBeenCalled();
+    expect(state.registry.businesses).toHaveLength(1);
   });
   it("rejects client price tampering and reused request IDs with different names", async () => {
     await expect(checkoutWorkspace({ ...input, priceId: "price_cheaper" })).rejects.toThrow("price changed");
@@ -74,22 +83,23 @@ describe("payment entitlement", () => {
   beforeEach(async () => { await checkoutWorkspace(input); });
   it("activates a verified, paid subscription using a stable workspace ID", async () => {
     expect(await syncWorkspaceSubscription("sub_workspace")).toBe(true);
-    expect(state.create).toHaveBeenCalledWith("Second workspace", { id: `b-${requestId}`, purchaseId: requestId });
+    expect(state.registry.businesses[1]).toMatchObject({ name: "Second workspace", id: `b-${requestId}`, purchaseId: requestId, access: "active" });
     expect(state.document.purchases[0].status).toBe("active");
     await syncWorkspaceSubscription("sub_workspace");
     expect(state.document.purchases).toHaveLength(1);
-    expect(state.create.mock.calls.every(([, input]) => input.id === `b-${requestId}`)).toBe(true);
+    expect(state.registry.businesses).toHaveLength(2);
+    expect(state.registry.activeId).toBe("default");
   });
   it("never activates an unpaid checkout", async () => {
     state.fetch.mockResolvedValue(Response.json(subscription({ status: "incomplete", latest_invoice: { status: "open" } })));
     await syncWorkspaceSubscription("sub_workspace");
-    expect(state.create).not.toHaveBeenCalled();
+    expect(state.registry.businesses).toHaveLength(1);
     expect(state.document.purchases[0].status).toBe("pending");
   });
   it("ignores subscriptions belonging to another installation", async () => {
     state.fetch.mockResolvedValue(Response.json(subscription({ metadata: { kind: "workspace", purchaseId: requestId, installationId: "other-install" } })));
     await syncWorkspaceSubscription("sub_workspace");
-    expect(state.create).not.toHaveBeenCalled();
+    expect(state.registry.businesses).toHaveLength(1);
     expect(state.document.purchases[0].subscriptionId).toBeUndefined();
   });
   it("rejects another subscription or price being attached to a paid workspace", async () => {
@@ -105,7 +115,7 @@ describe("payment entitlement", () => {
     await syncWorkspaceSubscription("sub_workspace");
     await syncWorkspaceSubscription("sub_workspace");
     expect(state.document.purchases[0].status).toBe("cancelled");
-    expect(state.access).toHaveBeenLastCalledWith(`b-${requestId}`, "suspended");
+    expect(state.registry.businesses[1].access).toBe("suspended");
   });
   it("schedules cancellation while preserving paid access", async () => {
     await syncWorkspaceSubscription("sub_workspace");
@@ -114,7 +124,7 @@ describe("payment entitlement", () => {
     const post = state.fetch.mock.calls.find(([, options]) => options.method === "POST" && options.body?.get("cancel_at_period_end") === "true");
     expect(post).toBeDefined();
     expect(state.document.purchases[0]).toMatchObject({ status: "active", cancelAtPeriodEnd: true });
-    expect(state.access).toHaveBeenLastCalledWith(`b-${requestId}`, "active");
+    expect(state.registry.businesses[1].access).toBe("active");
   });
   it("supports legacy and current Stripe invoice subscription references", () => {
     expect(subscriptionIdFrom({ subscription: "sub_old" })).toBe("sub_old");

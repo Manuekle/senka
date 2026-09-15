@@ -1,7 +1,9 @@
 import { generateObject } from "ai";
 import { z } from "zod";
 import { getProviderReport } from "./provider-catalog";
-import { languageModelForTask } from "./task-model";
+import { modelIdForTask } from "./task-model";
+import { resolveLanguageModel } from "./ai-provider";
+import { checkAiCredits, recordAiUsage } from "./ai-meter";
 import type { ProspectAssessment, ProspectStage } from "./types";
 
 // Reading a transcript and saying where the person landed commercially.
@@ -82,6 +84,7 @@ export async function assessProspect(input: {
 
   const health = await getProviderReport();
   if (health.status === "missing" || health.status === "invalid") return null;
+  if (!(await checkAiCredits()).allowed) return null;
 
   const who = input.medium === "call" ? "phone call" : "chat conversation";
   const agentLabel = input.agentName?.trim() || "the business";
@@ -108,12 +111,19 @@ export async function assessProspect(input: {
     .join("\n");
 
   try {
+    const modelId = await modelIdForTask("quick");
     const result = await generateObject({
-      model: await languageModelForTask("quick"),
+      model: resolveLanguageModel(modelId),
       schema: assessmentSchema,
       system,
       prompt: `Transcript:\n\n${transcript}`,
       abortSignal: AbortSignal.timeout(45_000),
+    });
+    await recordAiUsage({
+      model: modelId,
+      usage: result.usage,
+      conversationId: `prospect:${input.medium}`,
+      channel: "schedule",
     });
     return {
       stage: result.object.stage,

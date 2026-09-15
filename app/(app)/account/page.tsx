@@ -20,6 +20,7 @@ import { LicenseCard } from "@/components/ai-elements/license-card";
 import { licenseTone } from "@/components/ai-elements/license-credit-card";
 import { SoundSettings } from "../../_components/sound-settings";
 import { BusinessesCard } from "../../_components/businesses-card";
+import { CreditsOverviewCard } from "../../_components/credits-overview-card";
 import { useT } from "@/lib/i18n/provider";
 import { fetchJson, type UiError } from "@/lib/api-error-message";
 import { Spinner } from "@/components/ui/spinner";
@@ -265,6 +266,10 @@ export default function AccountPage() {
             </div>
           </Card>
 
+          {/* Credits left this period sit next to the plan line that pays for
+              them — the question people open this page with most often. */}
+          <CreditsOverviewCard />
+
           {/* Right under the account it belongs to, and above the plan: which
               businesses this installation runs is a bigger fact about it than
               which tier it is on. */}
@@ -402,6 +407,21 @@ function AccountSkeleton() {
             <SkeletonBar className="h-3 w-40" />
           </div>
           <SkeletonBar className="hidden h-8 w-36 rounded-[11px] sm:block" />
+        </div>
+      </div>
+
+      {/* AI credits */}
+      <div className="rounded-2xl border border-border bg-card shadow-[var(--shadow-soft)]">
+        <div className="space-y-3 p-5">
+          <div className="flex items-center gap-3">
+            <SkeletonBar className="size-9 shrink-0 rounded-xl" />
+            <SkeletonBar className="h-4 w-28" />
+          </div>
+          <div className="flex items-end justify-between">
+            <SkeletonBar className="h-7 w-32" />
+            <SkeletonBar className="h-4 w-24" />
+          </div>
+          <SkeletonBar className="h-4 w-full rounded-full" />
         </div>
       </div>
 

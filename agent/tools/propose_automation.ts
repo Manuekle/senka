@@ -1,8 +1,9 @@
 import { defineTool } from "eve/tools";
+import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { createAutomation } from "../../lib/business-store";
 import { workflowStepSchema, toWorkflowSteps } from "../../lib/workflow-schema";
-import { assertToolAllowed } from "../../lib/agent-scope";
+import { assertOwnerConsole, assertToolAllowed } from "../../lib/agent-scope";
 
 export default defineTool({
   description:
@@ -14,13 +15,11 @@ export default defineTool({
   inputSchema: z.object({
     name: z.string().min(1).describe("Short, human-readable name shown in the Automations list."),
     description: z.string().optional().describe("One sentence explaining what it does."),
-    trigger: z.enum(["keyword", "schedule", "new_chat", "no_reply"]),
+    trigger: z.enum(["keyword", "schedule", "new_chat", "no_reply", "webhook"]),
     triggerValue: z
       .string()
       .optional()
-      .describe(
-        "keyword: comma-separated keywords. schedule: 5-field cron (UTC). no_reply: duration like '30min'. Unused for new_chat.",
-      ),
+      .describe("keyword: comma-separated keywords. schedule: 5-field cron (UTC). no_reply: duration like '30min'. Unused for new_chat and webhook."),
     channel: z.enum(["web", "whatsapp", "instagram", "all"]).default("all"),
     steps: z
       .array(workflowStepSchema)
@@ -37,12 +36,15 @@ export default defineTool({
     status: z.string(),
   }),
   async execute({ name, description, trigger, triggerValue, channel, steps }, ctx) {
+    await assertOwnerConsole(ctx.session.id);
     await assertToolAllowed(ctx.session.id, "propose_automation");
     const list = await createAutomation({
       name,
       description: description ?? "",
       trigger,
-      triggerValue: triggerValue ?? "",
+      // A webhook secret must never be model-authored or copied from a
+      // keyword. The owner can read it in Automations after reviewing draft.
+      triggerValue: trigger === "webhook" ? randomBytes(24).toString("hex") : triggerValue ?? "",
       channel,
       steps: toWorkflowSteps(steps),
     });

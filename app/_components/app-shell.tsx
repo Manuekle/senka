@@ -18,6 +18,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ActionSwapIcon } from "@/components/motion/action-swap";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageToggle } from "@/components/language-toggle";
 import { useSound } from "@/components/sound-provider";
@@ -177,8 +178,7 @@ export function AppShell({ children }: { readonly children: ReactNode }) {
     // cuelume guide says sound actually earns its keep.
     const cueAttrs = { "data-cuelume-hover": "tick", "data-cuelume-press": "" } as const;
     const linkClassName = cn(
-      "relative flex items-center rounded-lg py-2 text-sm font-medium transition-all duration-150",
-      collapsed ? "justify-center px-0" : "gap-3 px-3",
+      "app-sidebar-link relative flex items-center rounded-lg py-2 text-sm font-medium",
       isActive
         ? "bg-muted text-foreground shadow-[var(--shadow-inset)]"
         : "text-muted-foreground hover:bg-accent hover:text-foreground",
@@ -186,28 +186,21 @@ export function AppShell({ children }: { readonly children: ReactNode }) {
     const linkContent = (
       <>
         <HugeiconsIcon icon={item.icon} size={16} strokeWidth={1.75} className="shrink-0" />
-        {collapsed ? null : t(item.labelKey)}
+        <span className="app-sidebar-label" aria-hidden={collapsed}>{t(item.labelKey)}</span>
         {badgeCount ? <NotificationBadge count={badgeCount} /> : null}
       </>
     );
 
-    if (!collapsed) {
-      return (
-        <Link key={item.href} href={item.href} className={linkClassName} {...cueAttrs}>
-          {linkContent}
-        </Link>
-      );
-    }
     return (
       <Tooltip key={item.href}>
         <TooltipTrigger asChild>
           {/* Icon-only here, so the accessible name has to come from
               aria-label — there's no visible text for it to read. */}
-          <Link href={item.href} aria-label={t(item.labelKey)} className={linkClassName} {...cueAttrs}>
+          <Link href={item.href} aria-current={isActive ? "page" : undefined} aria-label={t(item.labelKey)} className={linkClassName} {...cueAttrs}>
             {linkContent}
           </Link>
         </TooltipTrigger>
-        <TooltipContent side="right">{t(item.labelKey)}</TooltipContent>
+        {collapsed ? <TooltipContent side="right">{t(item.labelKey)}</TooltipContent> : null}
       </Tooltip>
     );
   };
@@ -231,15 +224,14 @@ export function AppShell({ children }: { readonly children: ReactNode }) {
 
       {/* Sidebar */}
       <aside
+        data-collapsed={collapsed}
         className={cn(
-          "hidden shrink-0 flex-col border-r border-border bg-card/50 backdrop-blur-sm md:flex",
-          "transition-[width] duration-200 ease-out",
+          "app-sidebar hidden shrink-0 flex-col overflow-hidden border-r border-border bg-card/50 backdrop-blur-sm md:flex",
           collapsed ? "w-[60px]" : "w-60",
         )}
       >
-        <div className={cn("flex h-14 shrink-0 items-center", collapsed ? "justify-center px-2" : "gap-2.5 px-5")}>
-          {!collapsed ? (
-            <div className="flex items-center gap-2">
+        <div className="app-sidebar-header relative flex h-14 shrink-0 items-center px-5">
+            <div className="app-sidebar-brand flex items-center gap-2" aria-hidden={collapsed}>
               {/* Same lockup as the landing `Wordmark`: 20px mark in a fixed
                   box, 20px `font-medium` word. */}
               <span className="flex size-8 shrink-0 items-center justify-center">
@@ -249,20 +241,22 @@ export function AppShell({ children }: { readonly children: ReactNode }) {
                 senka
               </span>
             </div>
-          ) : null}
           <Tooltip>
             <TooltipTrigger asChild>
               <button
                 type="button"
                 onClick={toggleCollapsed}
                 aria-label={collapsed ? t("nav.expand") : t("nav.collapse")}
+                aria-expanded={!collapsed}
                 className={cn(
-                  "flex size-8 items-center justify-center rounded-lg text-muted-foreground",
+                  "app-sidebar-toggle absolute flex size-8 items-center justify-center rounded-lg text-muted-foreground",
                   "transition-colors duration-150 hover:bg-accent hover:text-foreground",
-                  collapsed ? null : "ml-auto -mr-1",
+
                 )}
               >
-                <HugeiconsIcon icon={collapsed ? PanelLeftIcon : PanelLeftCloseIcon} size={16} strokeWidth={1.75} />
+                <ActionSwapIcon value={collapsed ? "collapsed" : "expanded"}>
+                  <HugeiconsIcon icon={collapsed ? PanelLeftIcon : PanelLeftCloseIcon} size={16} strokeWidth={1.75} />
+                </ActionSwapIcon>
               </button>
             </TooltipTrigger>
             <TooltipContent side="right">{collapsed ? t("nav.expand") : t("nav.collapse")}</TooltipContent>
@@ -287,13 +281,13 @@ export function AppShell({ children }: { readonly children: ReactNode }) {
                 aria-label={t("nav.newChat")}
                 data-cuelume-press
                 className={cn(
-                  "flex items-center rounded-lg bg-primary text-sm font-medium text-primary-foreground",
+                  "app-sidebar-link flex items-center rounded-lg bg-primary text-sm font-medium text-primary-foreground",
                   "shadow-[var(--shadow-button)] transition-transform duration-150 active:scale-[0.98]",
-                  collapsed ? "size-8 justify-center" : "gap-2 px-3 py-2",
+                  "h-9 w-full",
                 )}
               >
                 <HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={1.75} className="shrink-0" />
-                {collapsed ? null : t("nav.newChat")}
+                <span className="app-sidebar-label" aria-hidden={collapsed}>{t("nav.newChat")}</span>
               </Link>
             </TooltipTrigger>
             <TooltipContent side="right">{t("nav.newChat")}</TooltipContent>
@@ -301,18 +295,18 @@ export function AppShell({ children }: { readonly children: ReactNode }) {
           <CommandPalette collapsed={collapsed} />
         </div>
 
-        <nav className={cn("flex flex-1 flex-col gap-1 overflow-y-auto py-2 scrollbar-hide", collapsed ? "px-2" : "px-3")}>
+        <nav className={cn("app-sidebar-nav flex flex-1 flex-col gap-1 overflow-x-hidden overflow-y-auto py-2 scrollbar-hide")}>
           {NAV_GROUPS.map((group, groupIndex) => (
             <div key={group.id} className={cn("flex flex-col gap-1", groupIndex > 0 && "mt-3")}>
               {/* Collapsed to icons there is no room for a heading, so the
                   groups are separated by a rule instead. */}
-              {group.labelKey && !collapsed ? (
-                <p className="px-3 pb-1 text-[11px] font-medium text-muted-foreground">
-                  {t(group.labelKey)}
-                </p>
-              ) : null}
-              {group.labelKey && collapsed ? (
-                <span aria-hidden="true" className="mx-auto my-1 h-px w-5 bg-border" />
+              {group.labelKey ? (
+                <div className="app-sidebar-group relative" aria-hidden={collapsed}>
+                  <p className="app-sidebar-label px-3 pb-1 text-[11px] font-medium text-muted-foreground">
+                    {t(group.labelKey)}
+                  </p>
+                  <span aria-hidden="true" className="app-sidebar-divider absolute left-1/2 top-1/2 h-px w-5 -translate-x-1/2 bg-border" />
+                </div>
               ) : null}
               {group.items.map((item) => renderNavItem(item))}
             </div>
@@ -351,7 +345,6 @@ export function AppShell({ children }: { readonly children: ReactNode }) {
           in behind the opening edge. No separate background panel — no seam. */}
       <div className="flex flex-1 flex-col overflow-hidden">
         <MobileNav
-          activePath={activePath}
           chatBadge={chatBadge}
           inboxBadge={inboxBadge}
           isActivePath={isActivePath}
@@ -392,7 +385,6 @@ export function AppShell({ children }: { readonly children: ReactNode }) {
  * - `inert` when closed: no tab stop, no screen reader reach.
  */
 function MobileNav({
-  activePath,
   chatBadge,
   inboxBadge,
   isActivePath,
@@ -401,7 +393,6 @@ function MobileNav({
   setMobileMenuOpen,
   t,
 }: {
-  readonly activePath: string;
   readonly chatBadge: number;
   readonly inboxBadge: number;
   readonly isActivePath: (href: string) => boolean;
@@ -420,7 +411,7 @@ function MobileNav({
     const nav = navRef.current;
     const inner = drawerInnerRef.current;
     if (!nav || !inner) return;
-    const h = inner.scrollHeight;
+    const h = inner.getBoundingClientRect().height;
     if (h > 0) nav.style.setProperty("--app-nav-h", `${h}px`);
   }, []);
 
@@ -437,7 +428,7 @@ function MobileNav({
     setMobileMenuOpen(true);
   };
 
-  const closeMenu = () => setMobileMenuOpen(false);
+  const closeMenu = useCallback(() => setMobileMenuOpen(false), [setMobileMenuOpen]);
 
   // Close when viewport becomes desktop-wide (md = 768px).
   useEffect(() => {
@@ -445,7 +436,7 @@ function MobileNav({
     const onChange = () => { if (mq.matches) closeMenu(); };
     mq.addEventListener("change", onChange);
     return () => mq.removeEventListener("change", onChange);
-  }, []);
+  }, [closeMenu]);
 
   // Flatten all nav items in order: main items first.
   const allItems = NAV_ITEMS;
@@ -494,7 +485,7 @@ function MobileNav({
               aria-hidden="true"
               // biome-ignore lint/suspicious/noArrayIndexKey: two fixed glyphs
               key={index}
-              className="absolute inset-0 flex items-center justify-center transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.25,0.46,0.45,0.94)]"
+              className="absolute inset-0 flex items-center justify-center transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none"
               style={{
                 opacity: shown ? 1 : 0,
                 transform: shown ? "rotate(0deg)" : "rotate(-45deg)",

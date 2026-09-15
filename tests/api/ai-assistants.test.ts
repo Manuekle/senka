@@ -4,7 +4,14 @@ import { z } from "zod";
 
 const mocks = vi.hoisted(() => ({ generate: vi.fn(), usage: vi.fn(), createSkill: vi.fn() }));
 vi.mock("ai", () => ({ generateObject: mocks.generate }));
-vi.mock("@/lib/ai-route-guard", () => ({ guardAiRoute: async () => null, recordRouteUsage: mocks.usage }));
+vi.mock("@/lib/ai-route-guard", () => ({
+  guardAiRoute: async () => null,
+  recordRouteUsage: mocks.usage,
+}));
+vi.mock("@/lib/ai-meter", () => ({
+  checkAiCredits: async () => ({ allowed: true }),
+  recordAiUsage: mocks.usage,
+}));
 vi.mock("@/lib/task-model", () => ({ modelIdForTask: async () => "gpt-5-mini", languageModelForTask: async () => "test-model" }));
 vi.mock("@/lib/ai-provider", () => ({ resolveLanguageModel: () => "test-model" }));
 vi.mock("@/lib/provider-catalog", () => ({ getProviderReport: async () => ({ status: "ok" }) }));

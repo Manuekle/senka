@@ -34,6 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { SlidingTabs } from "@/components/ai-elements/sliding-tabs";
 import { useI18n, useT } from "@/lib/i18n/provider";
 import { countryOptions } from "@/lib/countries";
 import { fetchJson, isApiError, type UiError } from "@/lib/api-error-message";
@@ -79,6 +80,9 @@ export default function AgentVoicePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<UiError | null>(null);
   const [transcript, setTranscript] = useState<TranscriptLine[]>([]);
+  // Stacked below `lg`, the settings column buried the orb and the call
+  // controls entirely — so a phone shows the call or the settings, not both.
+  const [mobilePane, setMobilePane] = useState<"call" | "settings">("call");
   const lineId = useRef(0);
 
   const load = useCallback(async () => {
@@ -181,6 +185,17 @@ export default function AgentVoicePage() {
         ) : null}
       </header>
 
+      <div className="shrink-0 border-b border-border px-3 py-2 lg:hidden">
+        <SlidingTabs
+          value={mobilePane}
+          onValueChange={(id) => setMobilePane(id as "call" | "settings")}
+          tabs={[
+            { id: "call", label: t("voice.paneCall") },
+            { id: "settings", label: t("voice.paneSettings") },
+          ]}
+        />
+      </div>
+
       <ConversationProvider
         onMessage={({ message, source }) => appendLine(source, message)}
         onDisconnect={() => appendLine("ai", t("voice.transcriptEnded"))}
@@ -189,18 +204,29 @@ export default function AgentVoicePage() {
         }
       >
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
-          {/* Call + live transcript */}
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          {/* Call + live transcript. Hidden with CSS rather than unmounted:
+              switching tabs mid-call must not tear the call down. */}
+          <div
+            className={cn(
+              "min-h-0 flex-1 flex-col overflow-hidden",
+              mobilePane === "call" ? "flex" : "hidden lg:flex",
+            )}
+          >
             <CallStage
-                agent={agent}
-                transcript={transcript}
-                onClear={() => setTranscript([])}
-                onError={setError}
-              />
+              agent={agent}
+              transcript={transcript}
+              onClear={() => setTranscript([])}
+              onError={setError}
+            />
           </div>
 
           {/* Config column — scrolls independently */}
-          <div className="flex w-full shrink-0 flex-col gap-4 overflow-y-auto border-t border-border bg-muted/20 p-4 lg:w-[440px] lg:border-t-0 lg:border-l">
+          <div
+            className={cn(
+              "min-h-0 w-full flex-1 flex-col gap-4 overflow-y-auto bg-muted/20 p-4 lg:w-[440px] lg:flex-none lg:shrink-0 lg:border-l lg:border-border",
+              mobilePane === "settings" ? "flex" : "hidden lg:flex",
+            )}
+          >
             <VoiceSettings agent={agent} onSaved={setAgent} onError={setError} />
             <PhonePanel agent={agent} onSaved={setAgent} onError={setError} />
             <SavedCallsLink agentId={agent.id} />
@@ -847,7 +873,7 @@ function PhonePanel({
 
         <div className="border-border border-t pt-4">
           <p className="mb-2 font-medium text-[13px]">{t("voice.callTitle")}</p>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 sm:flex-nowrap">
             <Select value={countryIso} onValueChange={setCountryIso}>
               <SelectTrigger aria-label={t("common.country")} className="w-[4.5rem] shrink-0 justify-center px-2">
                 <span className="flex items-center gap-2">
@@ -890,11 +916,12 @@ function PhonePanel({
               placeholder="11 5555 0000"
               value={toNumber}
               inputMode="tel"
-              className="flex-1"
+              className="min-w-0 flex-1"
             />
             <Button
               disabled={busy !== null || !assigned || !toNumber.trim()}
               onClick={() => void call()}
+              className="w-full sm:w-auto"
             >
               {busy === "call" ? (
                 <Spinner />

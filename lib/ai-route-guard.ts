@@ -1,13 +1,10 @@
-import { randomUUID } from "node:crypto";
 import type { LanguageModelUsage } from "ai";
 import type { NextRequest } from "next/server";
 import { apiError } from "./api-error";
-import { resolveProvider } from "./ai-provider";
-import { recordUsage } from "./ai-usage";
-import { billingSourceForProvider, checkCreditGate } from "./credit-gate";
-import { getInstallationId } from "./license/installation";
 import { rateLimit } from "./rate-limit";
-import { warmCredentialCache } from "./credentials";
+import { checkAiCredits, recordAiUsage } from "./ai-meter";
+
+export { checkAiCredits } from "./ai-meter";
 
 /**
  * The two checks every model call made from a Next route was missing.
@@ -45,8 +42,7 @@ export async function guardAiRoute(
     return apiError("rate_limited", { status: 429 });
   }
 
-  await warmCredentialCache();
-  const gate = await checkCreditGate(await billingSourceForProvider(resolveProvider()));
+  const gate = await checkAiCredits();
   if (!gate.allowed) {
     // 402 rather than the code's default: "you are out of credit" is not the
     // same answer as "slow down", and the billing page keys off the status.
@@ -55,7 +51,6 @@ export async function guardAiRoute(
 
   return null;
 }
-
 
 /**
  * Records one model call made from a Next route.
@@ -88,25 +83,8 @@ export async function recordRouteUsage(input: {
   readonly usage: LanguageModelUsage | undefined;
   /** Which screen spent it, so the usage table can be read by feature. */
   readonly conversationId?: string;
+  /** Scheduled work has no browser channel, but still belongs in the ledger. */
+  readonly channel?: string;
 }): Promise<void> {
-  if (!input.usage) return;
-
-  try {
-    const provider = resolveProvider();
-    await recordUsage({
-      organizationId: await getInstallationId(),
-      conversationId: input.conversationId ?? null,
-      channel: "web",
-      provider,
-      model: input.model,
-      usageType: "llm",
-      inputTokens: input.usage.inputTokens,
-      outputTokens: input.usage.outputTokens,
-      cachedInputTokens: input.usage.inputTokenDetails?.cacheReadTokens,
-      billingSource: await billingSourceForProvider(provider),
-      idempotencyKey: randomUUID(),
-    });
-  } catch (error) {
-    console.error("[ai-route-guard] usage not recorded", error);
-  }
+  await recordAiUsage(input);
 }

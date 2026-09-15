@@ -32,6 +32,7 @@ const {
   updateAutomation,
   deleteAutomation,
   upsertContact,
+  importContacts,
   listContacts,
   getContactBySession,
   setContactStatus,
@@ -204,6 +205,24 @@ describe("business-store: contacts", () => {
 });
 
 // ── Chats ────────────────────────────────────────────────────────
+
+describe("business-store: contact import", () => {
+  it("creates in file order tagged csv, and updates existing contacts without re-attributing them", async () => {
+    await upsertContact({ phone: "+5491155550101", name: "Ana", source: "whatsapp", channel: "whatsapp" });
+    const result = await importContacts([
+      { name: "Bruno", email: "bruno@x.com" },
+      { name: "Ana Pérez", phone: "+5491155550101", attributes: { empresa: "Norte" } },
+      { name: "Carla", phone: "+34600555103", status: "closed" },
+    ]);
+    expect(result).toEqual({ created: 2, updated: 1 });
+    const contacts = await listContacts();
+    expect(contacts.map((c) => c.name)).toEqual(["Bruno", "Carla", "Ana Pérez"]);
+    const ana = contacts.find((c) => c.name === "Ana Pérez");
+    expect(ana?.source).toBe("whatsapp");
+    expect(ana?.attributes).toEqual({ empresa: "Norte" });
+    expect(contacts.filter((c) => c.source === "csv").map((c) => c.name)).toEqual(["Bruno", "Carla"]);
+  });
+});
 
 describe("business-store: chats", () => {
   it("starts with empty list", async () => {

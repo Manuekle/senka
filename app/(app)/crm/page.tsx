@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { HugeiconsIcon } from "@/components/icons/icon";
-import { Add01Icon, Cancel01Icon, Clock01Icon, Contact01Icon, Download01Icon, DragDropIcon, Loading03Icon, SearchIcon, Target01Icon, UserAdd01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Cancel01Icon, Clock01Icon, Contact01Icon, Download01Icon, DragDropIcon, FileImportIcon, Loading03Icon, SearchIcon, Target01Icon, UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { PageContainer } from "../../_components/page-container";
 import { Card, CardBody, CardHeader, CardSeparator, CardTitle, CardDescription } from "../../_components/dashboard-card";
 import { CardCarousel } from "../../_components/card-carousel";
@@ -309,6 +310,12 @@ export default function CrmPage() {
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" asChild>
+                <Link href="/crm/import">
+                  <HugeiconsIcon icon={FileImportIcon} size={16} strokeWidth={1.75} />
+                  {t("contactImport.cta")}
+                </Link>
+              </Button>
               <Button variant="outline" onClick={exportCSV} disabled={dragActive || total === 0}>
                 <HugeiconsIcon icon={Download01Icon} size={16} strokeWidth={1.75} />
                 {t("leads.exportCsv")}

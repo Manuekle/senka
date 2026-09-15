@@ -29,6 +29,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Textarea } from "@/components/ui/textarea";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -99,6 +106,9 @@ export default function EmailTemplatesPage() {
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiError, setAiError] = useState<UiError | null>(null);
 
+  // Below `md` the rail has no room beside the editor, so it opens as a
+  // drawer from the toolbar instead of disappearing with no way to switch.
+  const [railOpen, setRailOpen] = useState(false);
   const [dockOpen, setDockOpen] = useState(true);
   const [dockWidth, setDockWidth] = useState(400);
   const [dockTab, setDockTab] = useState<DockTab>("preview");
@@ -449,8 +459,16 @@ export default function EmailTemplatesPage() {
   return (
     <div className="content-enter flex h-full min-h-0 flex-col overflow-hidden">
       <header className="shrink-0 border-b border-border bg-card/40 backdrop-blur-sm">
-        <div className="flex items-center gap-3 px-3 py-2.5 sm:px-4">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground shadow-[var(--shadow-inset)]">
+        <div className="flex items-center gap-2 px-3 py-2.5 sm:gap-3 sm:px-4">
+          <button
+            type="button"
+            onClick={() => setRailOpen(true)}
+            aria-label={t("emailTemplates.railTitle")}
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-foreground md:hidden"
+          >
+            <HugeiconsIcon icon={PanelLeftIcon} size={16} strokeWidth={1.75} />
+          </button>
+          <div className="hidden size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground shadow-[var(--shadow-inset)] md:flex">
             <HugeiconsIcon icon={Mail02Icon} size={15} strokeWidth={1.75} />
           </div>
 
@@ -459,16 +477,22 @@ export default function EmailTemplatesPage() {
               {selected?.label ?? t("emailTemplates.title")}
             </h1>
             {readOnly ? (
-              <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border bg-card px-2 py-0.5 font-mono text-[10px] tracking-[0.1em] text-muted-foreground uppercase">
+              <span
+                title={t("emailTemplates.readOnly")}
+                className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border bg-card px-1.5 py-0.5 font-mono text-[10px] tracking-[0.1em] text-muted-foreground uppercase sm:px-2"
+              >
                 <HugeiconsIcon icon={SquareLock02Icon} size={10} strokeWidth={2} />
-                {t("emailTemplates.readOnly")}
+                <span className="sr-only sm:not-sr-only">{t("emailTemplates.readOnly")}</span>
               </span>
             ) : null}
           </div>
 
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <SaveIndicator status={saveStatus} dirty={dirty && !readOnly} />
 
+            {/* Wrapped so the beam's glow hides with the button on a phone,
+                where this action lives in the templates drawer instead. */}
+            <div className="hidden sm:block">
             <Beam colorVariant="mono" strength={0.55}>
               <button
                 type="button"
@@ -483,6 +507,7 @@ export default function EmailTemplatesPage() {
                 {t("emailTemplates.generateWithAI")}
               </button>
             </Beam>
+            </div>
 
             <button
               type="button"
@@ -504,13 +529,14 @@ export default function EmailTemplatesPage() {
                   type="button"
                   onClick={() => void handleDuplicate()}
                   disabled={creating}
+                  aria-label={t("emailTemplates.duplicate")}
                   className={cn(
-                    "inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground",
+                    "inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground sm:px-3",
                     "shadow-[var(--shadow-button)] transition-transform duration-150 active:scale-[0.98] disabled:opacity-60",
                   )}
                 >
                   <HugeiconsIcon icon={Copy01Icon} size={14} strokeWidth={1.75} />
-                  {t("emailTemplates.duplicate")}
+                  <span className="hidden sm:inline">{t("emailTemplates.duplicate")}</span>
                 </button>
               ) : (
                 <button
@@ -562,7 +588,13 @@ export default function EmailTemplatesPage() {
         ) : null}
       </header>
 
-      <div className="relative flex min-h-0 flex-1" style={{ ["--dock-max" as string]: `${DOCK_MAX}px` }}>
+      {/* A size container, so the dock can be "its width, or the whole
+          workspace if that is narrower" — on a phone a 400px dock inside a
+          375px screen clipped its own tabs and preview. */}
+      <div
+        className="@container relative flex min-h-0 flex-1"
+        style={{ ["--dock-max" as string]: `${DOCK_MAX}px` }}
+      >
         {/* Rail */}
         <aside className="hidden w-72 shrink-0 flex-col border-r border-border bg-card/30 md:flex xl:w-80">
           <TemplateRail
@@ -634,7 +666,7 @@ export default function EmailTemplatesPage() {
           aria-hidden={!dockOpen}
           inert={!dockOpen}
           style={{
-            width: dockOpen ? dockWidth : 0,
+            width: dockOpen ? `min(100cqw, ${dockWidth}px)` : 0,
             transition: isResizing ? "none" : "width var(--panel-open-dur) var(--panel-ease)",
           }}
           className={cn(
@@ -649,7 +681,7 @@ export default function EmailTemplatesPage() {
             data-open={dockOpen}
             style={
               {
-                width: dockWidth,
+                width: `min(100cqw, ${dockWidth}px)`,
                 "--panel-translate-x": "28px",
                 "--panel-translate-y": "0px",
               } as CSSProperties
@@ -727,6 +759,46 @@ export default function EmailTemplatesPage() {
           </div>
         </aside>
       </div>
+
+      <Drawer open={railOpen} onOpenChange={setRailOpen} panelClassName="max-w-sm">
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle icon={<HugeiconsIcon icon={Mail02Icon} size={18} strokeWidth={1.75} />}>
+              {t("emailTemplates.title")}
+            </DrawerTitle>
+          </DrawerHeader>
+          <div className="min-h-0 flex-1">
+            <TemplateRail
+              templates={templates}
+              selectedId={selectedId}
+              creating={creating}
+              onSelect={(id) => {
+                setRailOpen(false);
+                void openTemplate(id);
+              }}
+              onCreateNew={() => {
+                setRailOpen(false);
+                void handleCreate();
+              }}
+              onDelete={(id) => void handleDelete(id)}
+            />
+          </div>
+          <DrawerFooter>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() => {
+                setRailOpen(false);
+                setAiDialogOpen(true);
+              }}
+            >
+              <HugeiconsIcon icon={AiMail01Icon} size={14} strokeWidth={1.75} />
+              {t("emailTemplates.generateWithAI")}
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
 
       <Dialog open={aiDialogOpen} onOpenChange={setAiDialogOpen}>
         <DialogContent className="sm:max-w-md">

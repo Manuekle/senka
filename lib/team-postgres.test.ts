@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { rm } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 
 // Opt-in integration suite. Never point this at an application database.
 const databaseUrl = process.env.SENKA_TEST_DATABASE_URL;
@@ -26,6 +27,7 @@ describe.skipIf(!databaseUrl)("team with real PostgreSQL locks", () => {
   beforeAll(async () => {
     if (!databaseUrl || !new URL(databaseUrl).pathname.endsWith("_test")) throw new Error("Use an isolated _test database");
     vi.stubEnv("WORKFLOW_POSTGRES_URL", databaseUrl);
+    vi.stubEnv("STEVE_PG_MAX_POOL_SIZE", "1");
     [store, scope, context, coordinator] = await Promise.all([import("./business-store"), import("./business-scope"), import("./workspace-context"), import("./team-coordinator")]);
     first = (await scope.createBusiness("First integration workspace")).id;
     second = (await scope.createBusiness("Second integration workspace")).id;
@@ -38,6 +40,7 @@ describe.skipIf(!databaseUrl)("team with real PostgreSQL locks", () => {
   afterAll(async () => {
     if (databaseUrl) await (await import("./postgres-pool")).sharedPool().end();
     vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
     if (folder.startsWith(join(tmpdir(), "senka-team-test-")) || folder.startsWith("/tmp/senka-team-test-")) await rm(folder, { recursive: true, force: true });
   });
   it("captures concurrent mutations atomically without crossing business boundaries", async () => {
@@ -64,5 +67,32 @@ describe.skipIf(!databaseUrl)("team with real PostgreSQL locks", () => {
     expect(team.events[0].messages.map((message) => message.agentId)).toEqual(ids);
     expect(team.events[0].status).toBe("completed");
     expect((await context.withWorkspace(second, store.readTeamState)).events).toHaveLength(0);
+  });
+  it("provisions paid access atomically even when the database pool has one connection", async () => {
+    vi.stubEnv("STRIPE_WORKSPACE_PRICE_ID", "price_integration");
+    vi.stubEnv("STRIPE_PLATFORM_SECRET_KEY", "sk_test_fixture");
+    const requestId = randomUUID();
+    const sub = {
+      id: `sub_${requestId}`, customer: "cus_integration", status: "active",
+      metadata: { kind: "workspace", purchaseId: requestId, installationId: "integration-test" },
+      items: { data: [{ price: { id: "price_integration" }, quantity: 1, current_period_end: 1800000000 }] },
+      latest_invoice: { status: "paid" }, cancel_at_period_end: false,
+    };
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url.includes("/prices/")) return Response.json({ id: "price_integration", active: true, unit_amount: 1200, currency: "usd", billing_scheme: "per_unit", recurring: { interval: "month", interval_count: 1, usage_type: "licensed" } });
+      if (url.endsWith("checkout/sessions")) return Response.json({ id: "cs_integration", url: "https://checkout.stripe.com/test" });
+      return Response.json(sub);
+    }));
+    const billing = await import("./workspace-billing");
+    await billing.checkoutWorkspace({ requestId, name: "Paid integration workspace", priceId: "price_integration", origin: "https://app.example.test" });
+    await Promise.all([billing.syncWorkspaceSubscription(sub.id), billing.syncWorkspaceSubscription(sub.id)]);
+    let registry = await scope.listBusinesses();
+    expect(registry.businesses.filter((business) => business.purchaseId === requestId)).toHaveLength(1);
+    expect(registry.activeId).toBe(second);
+    sub.status = "canceled";
+    await billing.syncWorkspaceSubscription(sub.id);
+    registry = await scope.listBusinesses();
+    expect(registry.businesses.find((business) => business.purchaseId === requestId)?.access).toBe("suspended");
+    expect((await billing.listWorkspacePurchases()).find((purchase) => purchase.id === requestId)?.status).toBe("cancelled");
   });
 });

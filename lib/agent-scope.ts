@@ -88,3 +88,17 @@ export async function assertToolAllowed(sessionId: string, toolName: string): Pr
   if (!capability) return;
   await assertCapability(sessionId, capability);
 }
+
+/**
+ * Changes to the business configuration belong to its owner, not to someone
+ * writing in through WhatsApp or Instagram. The Eve console is persisted as
+ * the `web` contact for its session before the first turn reaches a tool.
+ */
+export async function assertOwnerConsole(sessionId: string): Promise<void> {
+  const contact = await getContactBySession(sessionId);
+  if (contact?.channel === "web") return;
+  throw new Error(
+    "This action is only available in the business owner's web console. " +
+      "Do not create or change business configuration from a customer conversation.",
+  );
+}

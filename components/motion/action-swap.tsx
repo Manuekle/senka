@@ -49,7 +49,7 @@ export interface ActionSwapIconProps {
   className?: string;
 }
 
-const BLUR_TRANSITION = { duration: 0.2, ease: "easeInOut" } as const;
+const BLUR_TRANSITION = { duration: 0.15, ease: "easeInOut" } as const;
 const ROLL_TRANSITION = SPRING_SWAP;
 const ROLL_EXIT_TRANSITION = { duration: 0.14, ease: EASE_OUT } as const;
 const SWAP_BLUR = "blur(8px)";
@@ -79,16 +79,17 @@ const CASCADE_LETTER_VARIANTS: Variants = {
 
 const TEXT_VARIANTS: Record<CoreAnimation, Variants> = {
   blur: {
-    initial: { opacity: 0, scale: 0.94, filter: SWAP_BLUR },
+    initial: { opacity: 0, y: 4, filter: SWAP_BLUR },
     animate: {
       opacity: 1,
       scale: 1,
+      y: 0,
       filter: "blur(0px)",
       transition: BLUR_TRANSITION,
     },
     exit: {
       opacity: 0,
-      scale: 0.94,
+      y: -4,
       filter: SWAP_BLUR,
       transition: BLUR_TRANSITION,
     },
@@ -112,7 +113,7 @@ const TEXT_VARIANTS: Record<CoreAnimation, Variants> = {
 
 const ICON_VARIANTS: Record<CoreAnimation, Variants> = {
   blur: {
-    initial: { opacity: 0, scale: 0.25, filter: SWAP_BLUR },
+    initial: { opacity: 0, scale: 0.9, filter: SWAP_BLUR },
     animate: {
       opacity: 1,
       scale: 1,
@@ -121,7 +122,7 @@ const ICON_VARIANTS: Record<CoreAnimation, Variants> = {
     },
     exit: {
       opacity: 0,
-      scale: 0.25,
+      scale: 0.9,
       filter: SWAP_BLUR,
       transition: BLUR_TRANSITION,
     },
@@ -216,7 +217,7 @@ export function ActionSwapText({
                 <motion.span
                   // biome-ignore lint/suspicious/noArrayIndexKey: position is the slot identity — the letter at a position is exactly what rolls.
                   key={i}
-                  custom={i * CASCADE_STAGGER}
+                  custom={Math.min(i * CASCADE_STAGGER, 0.24)}
                   variants={CASCADE_LETTER_VARIANTS}
                   className="inline-block whitespace-pre will-change-[opacity,filter,transform]"
                 >

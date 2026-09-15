@@ -100,6 +100,9 @@ export default function AgentChatPage() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [open, setOpen] = useState<ChannelConversation | null>(null);
   const [assessing, setAssessing] = useState(false);
+  // Below `lg` the two columns stack, and the history column is tall enough
+  // to squeeze the conversation to nothing — so a phone shows one at a time.
+  const [mobilePane, setMobilePane] = useState<"chat" | "history">("chat");
 
   const turnId = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
@@ -199,6 +202,7 @@ export default function AgentChatPage() {
     stop();
     setError(null);
     setOpenId(summary.id);
+    setMobilePane("chat");
     // Show what the list already knows while the transcript is on its way,
     // so opening a conversation never blanks the pane.
     setOpen({ ...summary, turns: [] });
@@ -322,6 +326,7 @@ export default function AgentChatPage() {
     stop();
     setError(null);
     setSessionId(session.id);
+    setMobilePane("chat");
     setTurns(
       session.turns.map((turn, index) => ({
         id: index + 1,
@@ -415,12 +420,22 @@ export default function AgentChatPage() {
             />
           </div>
 
-          <Button size="sm" variant="outline" onClick={startNew} disabled={turns.length === 0}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              startNew();
+              setMobilePane("chat");
+            }}
+            disabled={turns.length === 0}
+            aria-label={t("agents.chatNew")}
+            className="shrink-0"
+          >
             <HugeiconsIcon icon={Add01Icon} size={14} strokeWidth={1.75} />
-            {t("agents.chatNew")}
+            <span className="hidden sm:inline">{t("agents.chatNew")}</span>
           </Button>
 
-          <span className="hidden shrink-0 text-xs text-muted-foreground sm:block">
+          <span className="hidden shrink-0 text-xs text-muted-foreground xl:block">
             {t("agents.chatPageEyebrow")}
           </span>
         </div>
@@ -434,9 +449,25 @@ export default function AgentChatPage() {
         ) : null}
       </header>
 
+      <div className="shrink-0 border-b border-border px-3 py-2 lg:hidden">
+        <SlidingTabs
+          value={mobilePane}
+          onValueChange={(id) => setMobilePane(id as "chat" | "history")}
+          tabs={[
+            { id: "chat", label: t("agents.chatPaneConversation") },
+            { id: "history", label: t("agents.chatPaneHistory") },
+          ]}
+        />
+      </div>
+
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
         {/* Conversation + composer */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div
+          className={cn(
+            "min-h-0 flex-1 flex-col overflow-hidden",
+            mobilePane === "chat" ? "flex" : "hidden lg:flex",
+          )}
+        >
           {open ? (
             <LiveConversation
               conversation={open}
@@ -517,7 +548,12 @@ export default function AgentChatPage() {
         </div>
 
         {/* Saved chats — scrolls independently, like the voice config column */}
-        <div className="flex w-full shrink-0 flex-col gap-4 overflow-y-auto border-t border-border bg-muted/20 p-4 lg:w-[380px] lg:border-t-0 lg:border-l">
+        <div
+          className={cn(
+            "min-h-0 w-full flex-1 flex-col gap-4 overflow-y-auto bg-muted/20 p-4 lg:w-[380px] lg:flex-none lg:shrink-0 lg:border-l lg:border-border",
+            mobilePane === "history" ? "flex" : "hidden lg:flex",
+          )}
+        >
           <Card>
             <CardHeader className="flex-col gap-1">
               <CardTitle>{t("agents.chatChannelsTitle")}</CardTitle>

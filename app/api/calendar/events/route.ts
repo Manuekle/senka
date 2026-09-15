@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
-import { apiError, withApiErrors } from "@/lib/api-error";
-import { listUpcomingEvents } from "@/lib/calendar";
+import { apiError, missingField, withApiErrors } from "@/lib/api-error";
+import { createCalendarEvent, listUpcomingEvents, parseEventInput } from "@/lib/calendar";
+import { calendarFailure } from "@/lib/calendar-http";
 
 // GET /api/calendar/events?start=<ISO>&end=<ISO> — what the Calendar page
-// draws for the month grid it currently has open. Both params are optional;
+// draws for the range it currently has open. Both params are optional;
 // without them this defaults to "next 30 days", the same window a caller
 // hitting this route directly (curl, a script) would expect from its name.
+//
+// POST /api/calendar/events — create an event from the Calendar page. The
+// body is an `EventInput` (see lib/calendar.ts); the answer is the event as
+// Google stored it, so the page can draw it without a refetch.
 
 const DEFAULT_WINDOW_DAYS = 30;
 const MAX_RESULTS = 250;
@@ -36,4 +41,26 @@ export const GET = withApiErrors(async function GET(request: Request) {
   }
 
   return NextResponse.json({ events });
+});
+
+export const POST = withApiErrors(async function POST(request: Request) {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return apiError("invalid_json");
+  }
+
+  const parsed = parseEventInput(body);
+  if (!parsed.ok) {
+    return parsed.code === "missing_field" ? missingField(parsed.field) : apiError("invalid_field");
+  }
+
+  try {
+    const event = await createCalendarEvent(parsed.input);
+    if (event === null) return apiError("not_configured");
+    return NextResponse.json({ event }, { status: 201 });
+  } catch (error) {
+    return calendarFailure(error);
+  }
 });

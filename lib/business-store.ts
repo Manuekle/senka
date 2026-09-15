@@ -254,12 +254,20 @@ export async function readTeamState(): Promise<TeamState> {
   return (await readStore()).team;
 }
 
-/** Paid/background work needs the same cross-process row lock as business writes. */
-export async function updateTeamState<T>(fn: (team: TeamState, agents: Agent[]) => T): Promise<T> {
+/**
+ * Paid/background work needs the same cross-process row lock as business writes.
+ *
+ * `records` are the live contacts and deals, for the team's own actions.
+ * Writes through it deliberately skip change capture (unlike `updateStore`):
+ * a round that moves a deal must not start a round about moving that deal.
+ */
+export async function updateTeamState<T>(
+  fn: (team: TeamState, agents: Agent[], records: { contacts: Contact[]; deals: Deal[] }) => T,
+): Promise<T> {
   if (!process.env.WORKFLOW_POSTGRES_URL) throw new Error("PostgreSQL is required for autonomous teams");
   const where = await target();
   if (!(await usingDb(where))) throw new Error("The workspace database is unavailable");
-  return dbUpdateDocument<BusinessStore, T>(where.id, (raw) => (raw ? normalize(raw) : emptyStore()), (store) => fn(store.team, store.agents));
+  return dbUpdateDocument<BusinessStore, T>(where.id, (raw) => (raw ? normalize(raw) : emptyStore()), (store) => fn(store.team, store.agents, store));
 }
 
 function nowIso(): string {
@@ -365,6 +373,32 @@ export async function upsertContact(
   input: Partial<Contact> & { sessionId?: string; phone?: string; email?: string },
 ): Promise<Contact> {
   return updateStore((store) => upsertContactInStore(store, input));
+}
+
+/**
+ * A whole CSV in one write: a file that half-imports and then fails leaves the
+ * person unable to tell which rows made it. Matching is `upsertContact`'s, so a
+ * row whose email or phone already exists updates that contact.
+ *
+ * `source` is only stamped on contacts the file creates. Overwriting it on an
+ * existing contact would re-attribute a WhatsApp lead to "csv" in every chart.
+ */
+export async function importContacts(
+  inputs: readonly Partial<Contact>[],
+): Promise<{ created: number; updated: number }> {
+  return updateStore((store) => {
+    let created = 0;
+    // Reversed so the file's first row ends up first: new contacts are prepended.
+    for (const input of [...inputs].reverse()) {
+      const before = store.contacts.length;
+      const contact = upsertContactInStore(store, input);
+      if (store.contacts.length > before) {
+        created += 1;
+        store.contacts[0] = { ...contact, source: "csv" };
+      }
+    }
+    return { created, updated: inputs.length - created };
+  });
 }
 
 function upsertContactInStore(store: BusinessStore, input: Partial<Contact>): Contact {

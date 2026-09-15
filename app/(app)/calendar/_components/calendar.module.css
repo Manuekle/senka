@@ -1,0 +1,39 @@
+/* Calendar surfaces.
+   Event colours come from a hue and chroma set inline per event (see
+   `eventColorStyle`), so these few rules cover Google's whole palette in both
+   themes. The accent is the calendar's "today" red, the one colour here that
+   is not an event's. */
+
+.root {
+  --cal-accent: oklch(0.62 0.21 27);
+}
+
+:global(.dark) .root {
+  --cal-accent: oklch(0.68 0.2 27);
+}
+
+.event {
+  --ev-solid: oklch(0.63 var(--ev-c) var(--ev-h));
+  --ev-fill: oklch(0.63 var(--ev-c) var(--ev-h) / 0.15);
+  --ev-fill-hover: oklch(0.63 var(--ev-c) var(--ev-h) / 0.26);
+  --ev-ink: oklch(0.37 var(--ev-ci) var(--ev-h));
+  --ev-ink-soft: oklch(0.5 var(--ev-ci) var(--ev-h));
+}
+
+/* A timed event in the hour grid: the tint laid over an opaque base (the
+   element's own background colour), so the hour rules don't show through. */
+.block {
+  background-image: linear-gradient(var(--ev-fill), var(--ev-fill));
+}
+
+.block:hover {
+  background-image: linear-gradient(var(--ev-fill-hover), var(--ev-fill-hover));
+}
+
+:global(.dark) .event {
+  --ev-solid: oklch(0.7 var(--ev-c) var(--ev-h));
+  --ev-fill: oklch(0.7 var(--ev-c) var(--ev-h) / 0.2);
+  --ev-fill-hover: oklch(0.7 var(--ev-c) var(--ev-h) / 0.3);
+  --ev-ink: oklch(0.93 var(--ev-cd) var(--ev-h));
+  --ev-ink-soft: oklch(0.8 var(--ev-cd) var(--ev-h));
+}

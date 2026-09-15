@@ -7,6 +7,7 @@ import {
   setVoiceCallProspect,
 } from "@/lib/business-store";
 import { assessProspect } from "@/lib/prospect";
+import { guardAiRoute } from "@/lib/ai-route-guard";
 
 // POST /api/prospect/assess
 // Re-read one transcript now instead of waiting for the schedule
@@ -18,6 +19,12 @@ import { assessProspect } from "@/lib/prospect";
 // drift.
 
 export const POST = withApiErrors(async function POST(request: NextRequest) {
+  const refused = await guardAiRoute(request, "prospect-assess", {
+    max: 12,
+    windowMs: 5 * 60_000,
+  });
+  if (refused) return refused;
+
   let body: unknown;
   try {
     body = await request.json();

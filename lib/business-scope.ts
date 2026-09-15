@@ -115,29 +115,20 @@ export async function listBusinesses(): Promise<{
   return { businesses: registry.businesses, activeId: currentWorkspace() ?? registry.activeId };
 }
 
-export async function createBusiness(name: string, paid?: { id: string; purchaseId: string }): Promise<BusinessEntry> {
+export async function createBusiness(name: string): Promise<BusinessEntry> {
   const entry: BusinessEntry = {
-    id: paid?.id ?? `b-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    id: `b-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
     name: name.trim(),
     createdAt: new Date().toISOString(),
-    ...(paid ? { purchaseId: paid.purchaseId, access: "active" as const } : {}),
   };
   await registryStore.update((registry) => {
-    if (registry.businesses.some((business) => business.id === entry.id)) return;
     registry.businesses = [...registry.businesses, entry];
     // Creating a business and then having to go and switch to it is one step
     // too many: the point of creating it is to work on it.
-    if (!paid) registry.activeId = entry.id;
+    registry.activeId = entry.id;
   });
   invalidateActiveBusiness();
   return entry;
-}
-
-export async function setBusinessAccess(id: string, access: "active" | "suspended"): Promise<void> {
-  if (!(await registryStore.usingDatabase())) throw new Error("PostgreSQL is required for workspace billing");
-  await registryStore.update((registry) => {
-    registry.businesses = registry.businesses.map((entry) => entry.id === id ? { ...entry, access } : entry);
-  });
 }
 
 export async function requireBusinessDatabase(): Promise<void> {

@@ -10,6 +10,7 @@ import {
 } from "@/lib/business-profile-store";
 import { getProviderReport } from "@/lib/provider-catalog";
 import { apiError, withApiErrors } from "@/lib/api-error";
+import { guardAiRoute } from "@/lib/ai-route-guard";
 
 // GET    /api/business-profile — the hand-entered identity + the last generated profile
 // POST   /api/business-profile — { websiteUrl?, mapsUrl?, notes? } analyze and save
@@ -26,6 +27,9 @@ export const GET = withApiErrors(async function GET() {
 });
 
 export const POST = withApiErrors(async function POST(request: NextRequest) {
+  const refused = await guardAiRoute(request, "business-profile");
+  if (refused) return refused;
+
   let body: unknown;
   try {
     body = await request.json();
