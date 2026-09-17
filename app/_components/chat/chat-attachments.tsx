@@ -1,5 +1,8 @@
 "use client";
 
+import { useState } from "react";
+import Image from "next/image";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { HugeiconsIcon } from "@/components/icons/icon";
 import { Cancel01Icon, File01Icon, Image01Icon } from "@hugeicons/core-free-icons";
 
@@ -17,46 +20,90 @@ export function ChatAttachmentsPreview({
   readonly attachments: readonly PendingAttachment[];
   readonly onRemove: (id: string) => void;
 }) {
-  if (attachments.length === 0) return null;
+  const reducedMotion = useReducedMotion();
+  // Keep the row (and its padding) mounted while the last chips finish their
+  // exit animation, then let it collapse via onExitComplete. Uses React's
+  // "adjust state when a prop changes" pattern instead of an effect.
+  const [mounted, setMounted] = useState(attachments.length > 0);
+  const [prevCount, setPrevCount] = useState(attachments.length);
+  if (attachments.length !== prevCount) {
+    setPrevCount(attachments.length);
+    if (attachments.length > 0) setMounted(true);
+  }
+
+  if (!mounted) return null;
 
   return (
-    <div className="flex flex-wrap items-center gap-2 px-3 pt-2">
-      {attachments.map((item) => (
-        <div
-          key={item.id}
-          className="group relative flex items-center gap-2 rounded-xl border border-border bg-card/70 py-1.5 pl-2 pr-2.5 text-xs shadow-[var(--shadow-soft)] transition-all hover:border-input"
-        >
-          {item.isImage && item.previewUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={item.previewUrl}
-              alt={item.file.name}
-              className="size-8 rounded-lg object-cover border border-border/50"
-            />
-          ) : (
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-              <HugeiconsIcon icon={item.isImage ? Image01Icon : File01Icon} size={16} strokeWidth={1.75} />
-            </div>
-          )}
-          <div className="flex min-w-0 max-w-[140px] flex-col">
-            <span className="truncate font-medium text-foreground">{item.file.name}</span>
-            <span className="text-[10px] text-muted-foreground">
-              {(item.file.size / 1024).toFixed(0)} KB
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onRemove(item.id);
-            }}
-            className="ml-1 rounded-full p-0.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-            title="Quitar archivo"
+    // The chips sit inside the composer's outer frame but outside the inner
+    // panel — the muted gap between the two borders, like a docked strip.
+    // They pop in (badge-style, bouncy ease) and blur-fade out on removal,
+    // so nothing ever appears "de repente".
+    <div className="flex flex-wrap items-center gap-2 px-1 pb-2 pt-1.5">
+      <AnimatePresence
+        onExitComplete={() => {
+          if (attachments.length === 0) setMounted(false);
+        }}
+      >
+        {attachments.map((item) => (
+          <motion.div
+            key={item.id}
+            layout={!reducedMotion}
+            initial={
+              reducedMotion
+                ? { opacity: 0 }
+                : { opacity: 0, scale: 0.92, y: -4, filter: "blur(4px)" }
+            }
+            animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
+            exit={
+              reducedMotion
+                ? { opacity: 0 }
+                : {
+                    opacity: 0,
+                    scale: 0.92,
+                    y: -4,
+                    filter: "blur(4px)",
+                    transition: { duration: 0.15, ease: [0.4, 0, 1, 1] },
+                  }
+            }
+            // Enter: quick, with the motion-token bounce for a badge pop.
+            transition={{ duration: reducedMotion ? 0 : 0.22, ease: [0.34, 1.36, 0.64, 1] }}
+            className="flex origin-top-left items-center gap-2 rounded-2xl border border-border/60 bg-card py-1 pr-1.5 pl-1"
           >
-            <HugeiconsIcon icon={Cancel01Icon} size={14} strokeWidth={2} />
-          </button>
-        </div>
-      ))}
+            {item.isImage && item.previewUrl ? (
+              <Image
+                src={item.previewUrl}
+                alt={item.file.name}
+                width={48}
+                height={48}
+                className="size-6 shrink-0 rounded-lg object-cover"
+              />
+            ) : (
+              <div className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                <HugeiconsIcon
+                  icon={item.isImage ? Image01Icon : File01Icon}
+                  size={12}
+                  strokeWidth={1.75}
+                />
+              </div>
+            )}
+            <span className="max-w-[140px] truncate text-xs font-medium text-foreground">
+              {item.file.name}
+            </span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove(item.id);
+              }}
+              className="rounded-lg p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              title="Quitar archivo"
+              aria-label={`Quitar ${item.file.name}`}
+            >
+              <HugeiconsIcon icon={Cancel01Icon} size={12} strokeWidth={2} />
+            </button>
+          </motion.div>
+        ))}
+      </AnimatePresence>
     </div>
   );
 }

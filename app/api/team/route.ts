@@ -5,6 +5,7 @@ import { listAgents, readTeamState, updateTeamState } from "@/lib/business-store
 import { activeBusinessId } from "@/lib/business-scope";
 import { isAutoTeam, syncAutoTeam, type TeamState } from "@/lib/team-types";
 import type { Agent } from "@/lib/types";
+import { requireOwner } from "@/lib/owner-gate";
 
 /** An automatic team follows the active agents. Opening the page applies that
  *  straight away instead of leaving it to the next schedule tick; a database
@@ -39,6 +40,11 @@ const settings = z.object({
   mode: z.enum(["auto", "manual"]).default("manual"),
 });
 export const PUT = withApiErrors(async (request: NextRequest) => {
+  // Who is on the team decides which agents may act on the shared inbox —
+  // an account-level capability, so an account-level gate.
+  const denied = await requireOwner(request);
+  if (denied) return denied;
+
   const parsed = settings.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return apiError("invalid_body");
   const value = parsed.data;

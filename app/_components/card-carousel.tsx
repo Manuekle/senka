@@ -11,7 +11,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { HugeiconsIcon } from "@/components/icons/icon";
-import { ArrowLeft02Icon, ArrowRight02Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 
 /**
@@ -171,7 +171,7 @@ export function CardCarousel({
         aria-hidden={!hasOverflow}
       >
         <CarouselButton
-          icon={ArrowLeft02Icon}
+          icon={ArrowLeft01Icon}
           label="Anterior"
           disabled={shuttle.frac <= 0}
           onClick={() => nudge(-1)}
@@ -200,7 +200,7 @@ export function CardCarousel({
           />
         </div>
         <CarouselButton
-          icon={ArrowRight02Icon}
+          icon={ArrowRight01Icon}
           label="Siguiente"
           disabled={shuttle.frac >= 1}
           onClick={() => nudge(1)}
@@ -216,7 +216,7 @@ function CarouselButton({
   disabled,
   onClick,
 }: {
-  readonly icon: typeof ArrowLeft02Icon;
+  readonly icon: typeof ArrowLeft01Icon;
   readonly label: string;
   readonly disabled?: boolean;
   readonly onClick: () => void;

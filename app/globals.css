@@ -118,6 +118,14 @@
   --font-heading: "Saans", "Saans Fallback", "Inter", ui-sans-serif, system-ui, sans-serif;
 }
 
+@theme {
+  /* ── Motion tokens ────────────────────────────────────────── */
+  --ease-smooth-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-expo-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.36, 0.64, 1);
+  --ease-bounce-strong: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
 :root {
   color-scheme: light;
 
@@ -263,7 +271,7 @@
   --btn-destructive-focus-ring: oklch(0.72 0.13 27);
 
   /* Button easing */
-  --btn-easing: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --btn-easing: var(--ease-smooth-out);
 
   /* ── Status badge palette ──────────────────────────────────── */
   --status-pending-bg: oklch(0.96 0.03 60);
@@ -453,7 +461,7 @@
   --btn-destructive-focus-ring: oklch(0.46 0.13 22);
 
   /* Button easing */
-  --btn-easing: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --btn-easing: var(--ease-smooth-out);
 
   /* ── Mermaid diagrams (dark) ───────────────────────────────── */
   /* Same roles, the zinc ramp read from the other end. `--diagram-bg` is the
@@ -737,7 +745,7 @@ textarea {
 
 /* Shared page entrance — used by PageContainer on every route */
 .page-enter {
-  animation: enter 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+  animation: enter 0.25s var(--ease-smooth-out) both;
 }
 
 /* Content reveal — fades content in when the Skeleton flips from
@@ -757,7 +765,7 @@ textarea {
 }
 
 .content-enter {
-  animation: content-enter 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+  animation: content-enter 0.35s var(--ease-smooth-out) both;
 }
 
 /* ── Reveal animation (EASE_OUT) — for content that slides in/out ─── */
@@ -783,10 +791,10 @@ textarea {
 }
 
 .t-reveal {
-  animation: reveal-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: reveal-in 0.2s var(--ease-expo-out) both;
 }
 .t-reveal[data-state="closed"] {
-  animation: reveal-out 0.12s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: reveal-out 0.12s var(--ease-expo-out) both;
 }
 
 /* ── Dropdown/select animation (EASE_OUT) — 150-250ms range ───────── */
@@ -812,11 +820,11 @@ textarea {
 }
 
 .t-dropdown {
-  animation: dropdown-in 0.19s cubic-bezier(0.23, 1, 0.32, 1) both;
+  animation: dropdown-in 0.19s var(--ease-smooth-out) both;
   transform-origin: var(--radix-dropdown-menu-content-transform-origin, var(--radix-select-content-transform-origin, center top));
 }
 .t-dropdown[data-state="closed"] {
-  animation: dropdown-out 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+  animation: dropdown-out 0.15s var(--ease-smooth-out) both;
   pointer-events: none;
 }
 
@@ -829,10 +837,10 @@ textarea {
   to { opacity: 1; }
 }
 .t-goo-menu {
-  animation: goo-menu-hold 0.19s cubic-bezier(0.23, 1, 0.32, 1) both;
+  animation: goo-menu-hold 0.19s var(--ease-smooth-out) both;
 }
 .t-goo-menu[data-state="closed"] {
-  animation: goo-menu-hold 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+  animation: goo-menu-hold 0.15s var(--ease-smooth-out) both;
 }
 @media (prefers-reduced-motion: reduce) {
   .t-goo-menu { animation-duration: 0.01s !important; }
@@ -860,11 +868,20 @@ textarea {
 }
 
 .list-fade-in {
-  animation: list-fade-in 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+  animation: list-fade-in 0.28s var(--ease-smooth-out) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .list-fade-in { animation: none !important; }
+}
+
+/* ── Team feed typing caret ────────────────────────────────────────── */
+/* Streaming text in the autonomous-team feed: a block cursor that blinks
+   between the "off" and "on" steps, drawn in the speaking agent's own colour. */
+
+@keyframes team-caret {
+  0%, 45% { opacity: 1; }
+  55%, 100% { opacity: 0.1; }
 }
 
 /* ── Background patterns ─────────────────────────────────────────── */
@@ -1028,7 +1045,7 @@ textarea {
   --reason-step: 500ms;
   --reason-lines: 6;
   --reason-fade: 28px;
-  --reason-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --reason-ease: var(--ease-smooth-out);
 }
 
 .t-reason { position: relative; overflow: hidden; }
@@ -1085,7 +1102,7 @@ textarea {
   --stream-gap: 60ms;
   --stream-fade: 350ms;
   --stream-blur: 1px;
-  --stream-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --stream-ease: var(--ease-smooth-out);
 }
 
 .t-stream-w {
@@ -1197,7 +1214,7 @@ textarea {
   --stack-spread-gap: 8px;
   --stack-depth-scale: 0.06;
   --stack-depth-fade: 0.4;
-  --stack-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --stack-ease: var(--ease-smooth-out);
 }
 
 .t-stack { position: relative; }
@@ -1270,7 +1287,7 @@ textarea {
   --toggle-ov1: 1px;
   --toggle-ov2: 0px;
   --toggle-track: 0ms;
-  --toggle-ease: cubic-bezier(0.34, 1.35, 0.64, 1);
+  --toggle-ease: var(--ease-bounce);
 }
 
 .t-toggle { transition: background var(--toggle-track) var(--toggle-ease); }
@@ -1301,7 +1318,7 @@ textarea {
   --check-draw: 350ms;
   --check-delay: 0ms;
   --check-uncheck: 150ms;
-  --check-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --check-ease: var(--ease-smooth-out);
 }
 
 .t-check {
@@ -1338,7 +1355,7 @@ textarea {
 
 :root {
   --tabs-dur: 250ms;
-  --tabs-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --tabs-ease: var(--ease-smooth-out);
   --tabs-text-muted: var(--muted-foreground);
   --tabs-text-active: var(--foreground);
   --tabs-bar-bg: var(--muted);
@@ -1609,7 +1626,7 @@ textarea {
   --shake-overshoot: 4px;
   --shake-dur-a: 80ms;
   --shake-dur-b: 60ms;
-  --shake-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --shake-ease: var(--ease-smooth-out);
   --revert-hold: 3000ms;
   --revert-dur: 280ms;
   --shake-error-border: oklch(0.58 0.22 27);
@@ -1755,7 +1772,7 @@ textarea {
   --stagger-distance: 12px;
   --stagger-stagger: 40ms;
   --stagger-blur: 3px;
-  --stagger-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --stagger-ease: var(--ease-smooth-out);
 }
 
 .t-stagger-line {
@@ -1802,8 +1819,8 @@ textarea {
   --badge-blur: 2px;
   --badge-offset-x: -8.2px;
   --badge-offset-y: 12.4px;
-  --badge-slide-ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --badge-pop-ease: cubic-bezier(0.34, 1.36, 0.64, 1);
+  --badge-slide-ease: var(--ease-smooth-out);
+  --badge-pop-ease: var(--ease-bounce);
   --badge-close-ease: cubic-bezier(0.4, 0, 0.2, 1);
   --badge-bg: var(--primary);
   --badge-fg: var(--primary-foreground);
@@ -1878,8 +1895,8 @@ textarea {
   --clear-in-dur: 400ms;
   --clear-out-fly: 12px;
   --clear-in-fly: 12px;
-  --clear-out-ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --clear-in-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --clear-out-ease: var(--ease-smooth-out);
+  --clear-in-ease: var(--ease-smooth-out);
   --clear-blur: 2px;
   --glow-delay: 50ms;
   --glow-peak-at: 0.15;
@@ -1905,7 +1922,7 @@ textarea {
   --modal-close-dur: 150ms;
   --modal-scale: 0.96;
   --modal-scale-close: 0.96;
-  --modal-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --modal-ease: var(--ease-smooth-out);
 }
 
 /* Keyframes, not transitions: Radix's Presence holds a closing element in the
@@ -2250,7 +2267,7 @@ textarea {
    right instead of snapping in as a finished block. */
 .chart-bar {
   transform-origin: bottom;
-  animation: chart-bar-grow 520ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation: chart-bar-grow 520ms var(--ease-expo-out) backwards;
 }
 
 @keyframes chart-bar-grow {
@@ -2313,7 +2330,7 @@ textarea {
   --panel-close-dur: 350ms;
   --panel-translate-y: 100px;
   --panel-blur: 2px;
-  --panel-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --panel-ease: var(--ease-smooth-out);
 }
 
 /* ── Sliding panel ───────────────────────────────────────────────────
@@ -2396,7 +2413,7 @@ html[data-menu-open] {
 }
 
 .flow-node {
-  animation: flow-node-in 0.34s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+  animation: flow-node-in 0.34s var(--ease-smooth-out) both;
 }
 
 /* Slot "+" affordance — same entrance, centering likewise on the wrapper. */
@@ -2412,7 +2429,7 @@ html[data-menu-open] {
 }
 
 .flow-slot {
-  animation: flow-slot-in 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+  animation: flow-slot-in 0.3s var(--ease-smooth-out) both;
 }
 
 /* Edges draw themselves in on mount. --edge-len is set per-path from the
@@ -2424,7 +2441,7 @@ html[data-menu-open] {
 
 .flow-edge {
   stroke-dasharray: var(--edge-len, 200);
-  animation: flow-edge-draw 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+  animation: flow-edge-draw 0.5s var(--ease-smooth-out) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2439,8 +2456,8 @@ html[data-menu-open] {
 :root {
   --morph-open-dur: 350ms;
   --morph-close-dur: 250ms;
-  --morph-ease: cubic-bezier(0.34, 1.25, 0.64, 1);
-  --morph-close-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --morph-ease: var(--ease-bounce);
+  --morph-close-ease: var(--ease-smooth-out);
   --morph-r-closed: 40px;
   --morph-r-open: 20px;
   --morph-fade-dur: 200ms;
@@ -2522,7 +2539,7 @@ html[data-menu-open] {
   --acc-expand: 250ms;
   --acc-collapse: 250ms;
   --acc-chevron: 250ms;
-  --acc-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --acc-ease: var(--ease-smooth-out);
 }
 
 .t-acc-panel {
@@ -2590,9 +2607,9 @@ html[data-menu-open] {
   filter: blur(2px);
   pointer-events: none;
   transition:
-    opacity 160ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 220ms cubic-bezier(0.34, 1.25, 0.64, 1),
-    filter 160ms cubic-bezier(0.22, 1, 0.36, 1);
+    opacity 160ms var(--ease-smooth-out),
+    transform 220ms var(--ease-bounce),
+    filter 160ms var(--ease-smooth-out);
 }
 .flow-node-tools[data-open="true"] {
   opacity: 1;
@@ -2605,7 +2622,7 @@ html[data-menu-open] {
   transform: translateY(3px);
   transition:
     opacity 140ms ease-out,
-    transform 200ms cubic-bezier(0.34, 1.25, 0.64, 1);
+    transform 200ms var(--ease-bounce);
 }
 .flow-node-tools[data-open="true"] > * {
   opacity: 1;
@@ -2634,7 +2651,7 @@ html[data-menu-open] {
   --toggle-ov1: 1.5px;
   --toggle-ov2: 0px;
   --toggle-track: 220ms;
-  --toggle-ease: cubic-bezier(0.34, 1.35, 0.64, 1);
+  --toggle-ease: var(--ease-bounce);
 }
 
 .t-toggle {
@@ -2682,7 +2699,7 @@ html[data-menu-open] {
   --tooltip-out-dur: 90ms;
   --tooltip-delay: 60ms;
   --tooltip-scale: 0.96;
-  --tooltip-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --tooltip-ease: var(--ease-smooth-out);
 }
 
 .t-tooltip {
@@ -2721,8 +2738,8 @@ html[data-menu-open] {
   --check-blur-from: 4px;
   --check-path-dur: 350ms;
   --check-path-delay: 60ms;
-  --check-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --check-ease-bob: cubic-bezier(0.34, 1.35, 0.64, 1);
+  --check-ease-out: var(--ease-smooth-out);
+  --check-ease-bob: var(--ease-bounce);
 }
 
 .t-success-check {
@@ -2900,8 +2917,8 @@ html:has(.lp) body {
      copy uses `text-muted-foreground`, and micro-labels the app's own
      `/60`–`/70` step of it, so there is no landing-only text ramp to keep
      in sync. */
-  --lp-ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  --lp-ease-soft: cubic-bezier(0.16, 1, 0.3, 1);
+  --lp-ease: var(--ease-smooth-out);
+  --lp-ease-soft: var(--ease-expo-out);
   /* 420ms, not 760. At 760 an element revealed on a normal scroll is still
      settling well after it has reached the middle of the screen, which reads
      as the page lagging behind the wheel rather than as anything arriving. */
@@ -3081,7 +3098,7 @@ html.lenis body {
      being precise about: the same curve shape at `1.56` — the overshoot the
      radius uses, where 10% of 24px is 2px — would be a 46px flap here. The
      amount that reads as weight on one property reads as a bug on another. */
-  --lp-menu-ease: cubic-bezier(0.34, 1.3, 0.5, 1);
+  --lp-menu-ease: var(--ease-bounce);
   --lp-menu-ease-close: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -3182,7 +3199,7 @@ html.lenis body {
     opacity 200ms var(--lp-ease),
     background-color 260ms var(--lp-ease),
     box-shadow var(--lp-menu-open-dur) var(--lp-ease-soft),
-    border-radius var(--lp-menu-open-dur) cubic-bezier(0.34, 1.56, 0.64, 1);
+    border-radius var(--lp-menu-open-dur) var(--ease-bounce-strong);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -3339,10 +3356,10 @@ html.lenis body {
 }
 .app-disclosure { overflow: hidden; }
 .app-disclosure[data-state="open"] {
-  animation: app-disclosure-open 250ms cubic-bezier(0.22, 1, 0.36, 1);
+  animation: app-disclosure-open 250ms var(--ease-smooth-out);
 }
 .app-disclosure[data-state="closed"] {
-  animation: app-disclosure-close 250ms cubic-bezier(0.22, 1, 0.36, 1);
+  animation: app-disclosure-close 250ms var(--ease-smooth-out);
 }
 @media (prefers-reduced-motion: reduce) {
   .app-disclosure { animation: none !important; }
@@ -3352,7 +3369,7 @@ html.lenis body {
    A single duration also keeps padding and the header control in step. */
 .app-sidebar {
   --sidebar-duration: 400ms;
-  --sidebar-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --sidebar-ease: var(--ease-smooth-out);
   transition: width var(--sidebar-duration) var(--sidebar-ease);
 }
 .app-sidebar[data-collapsed="true"] { --sidebar-duration: 350ms; }
@@ -3417,7 +3434,7 @@ html.lenis body {
   /* Drawer timing — slightly snappier than the landing's slower hero page. */
   --app-nav-open-dur: 400ms;
   --app-nav-close-dur: 350ms;
-  --app-nav-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --app-nav-ease: var(--ease-smooth-out);
   --app-nav-ease-close: var(--app-nav-ease);
   --app-nav-radius: 20px;
   --app-nav-h: 0px;
@@ -3482,9 +3499,9 @@ html.lenis body {
   translate: 0 -8px;
   filter: blur(2px);
   transition:
-    opacity    120ms var(--lp-ease, cubic-bezier(0.25, 0.46, 0.45, 0.94)),
-    translate  120ms var(--lp-ease, cubic-bezier(0.25, 0.46, 0.45, 0.94)),
-    filter     120ms var(--lp-ease, cubic-bezier(0.25, 0.46, 0.45, 0.94));
+    opacity    120ms var(--lp-ease, var(--ease-smooth-out)),
+    translate  120ms var(--lp-ease, var(--ease-smooth-out)),
+    filter     120ms var(--lp-ease, var(--ease-smooth-out));
 }
 
 .app-nav[data-open="true"] .app-nav-item {
@@ -3492,9 +3509,9 @@ html.lenis body {
   translate: 0 0;
   filter: blur(0);
   transition:
-    opacity    320ms var(--lp-ease-soft, cubic-bezier(0.16, 1, 0.3, 1)),
-    translate  320ms var(--lp-ease-soft, cubic-bezier(0.16, 1, 0.3, 1)),
-    filter     320ms var(--lp-ease-soft, cubic-bezier(0.16, 1, 0.3, 1));
+    opacity    320ms var(--lp-ease-soft, var(--ease-expo-out)),
+    translate  320ms var(--lp-ease-soft, var(--ease-expo-out)),
+    filter     320ms var(--lp-ease-soft, var(--ease-expo-out));
   transition-delay: calc(min(var(--i), 6) * 22ms + 40ms);
 }
 
@@ -3811,7 +3828,7 @@ html.lenis body {
   --acc-expand: 380ms;
   --acc-collapse: 300ms;
   --acc-chevron: 300ms;
-  --acc-ease: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --acc-ease: var(--ease-bounce-strong);
 }
 .lp .t-acc-chevron { transform: rotate(0deg); }
 .lp .t-acc[data-open="true"] .t-acc-chevron { transform: rotate(45deg); }
@@ -3854,7 +3871,7 @@ html.lenis body {
   --digit-distance: 8px;
   --digit-stagger: 70ms;
   --digit-blur: 2px;
-  --digit-ease: cubic-bezier(0.34, 1.45, 0.64, 1);
+  --digit-ease: var(--ease-bounce-strong);
   --digit-dir-x: 0;
   --digit-dir-y: 1;
 }
@@ -5690,52 +5707,28 @@ html.lenis body {
 /* The screen between opening a conversation and reading it — see
    `app/_components/chat/agent-loading.tsx` for what it says and why.
 
-   Lighting and type, nothing else: no plate, no border, no surface. What
-   there is, is built the way the marketing rig builds light — the long note
-   above `.lp-beam` is the argument, and this scene follows three of its
-   rules, having failed each of them once:
+   It used to be a lit room — conic cone, landing pool, vignette, grain —
+   and the light was the problem: a stage rig bolted onto a working screen,
+   plus a grain blend pass over the viewport on the one screen people hit
+   most often while waiting.
 
-   1. Gradients, not `filter: blur()`. A soft blob is a blurred rectangle,
-      and a blurred rectangle over half the viewport is a full offscreen pass
-      per frame for a shape a conic gradient draws exactly. It also *looks*
-      like a blurred rectangle: the smudge that costs the most is the one
-      that reads as cheapest.
-   2. A cone, not a disc. Light comes from somewhere. A radial bloom centred
-      on the text is a grey oval with no source, which is the difference
-      between a lit room and a stain; a cone swept about a point above the
-      screen has a direction, and the eye reads direction as lighting.
-   3. It does not move. "A light that pulses is a notification; a light that
-      sits still is a room." The only motion on this screen is the spinner
-      and the sweep across the label — the two things that are actually
-      claiming the app is still working.
-
-   Both themes get the same fixture at different exposures. On dark the light
-   is white at a low alpha over a ground that is nearly black at the corners;
-   on light, white at a *high* alpha over a near-white page, where the whole
-   range between `--background` and white is three points of lightness and
-   every stop has to spend them carefully.
+   So the scene is the chat's own ground, borrowed exactly: the grid
+   pattern the conversation itself sits on (`bg-pattern-grid`, see
+   `agent-chat.tsx`), faded at the edges the same way `.bg-pattern-fade`
+   fades it, and above it only type and one small ring. The same room
+   arriving, minus the theatre.
 
    Colours are written out at each alpha instead of derived with `color-mix`:
    Lightning CSS mangles `color-mix(…, transparent)` in this project and ships
-   it at full alpha, which here would be a white rectangle across the top of
-   the screen. */
+   it at full alpha, which here would be a white rectangle across the screen. */
 .chat-loading {
-  /* The cone, from its core out to the last of the spill. */
-   --stage-cone-1: oklch(1 0 0 / 0.94);
-   --stage-cone-2: oklch(1 0 0 / 0.56);
-   --stage-cone-3: oklch(1 0 0 / 0.18);
-  /* The pool the light makes where it lands, on the words. */
-   --stage-pool: oklch(1 0 0 / 0.86);
-   --stage-pool-spill: oklch(1 0 0 / 0.46);
-  /* Corners. Barely anything in light theme — the job here is depth, and a
-     vignette heavy enough to see is a grey box drawn around the page. */
-  --stage-vignette: oklch(0.5 0 0 / 0.07);
-  /* The ring: its unlit side, and the arc facing the light. */
+  /* The grid SVG is lines only — same asset the chat renders — so full
+     strength here matches the conversation view. */
+  --stage-pattern-opacity: 1;
+  /* The ring: its unlit side, and the bright arc. */
   --stage-ring: oklch(0.55 0 0 / 0.14);
    --stage-ring-hot: oklch(0.42 0 0 / 0.78);
-  --stage-grain: 0.016;
-  /* The page ground in light theme: the room is already the brightest thing
-     the light could land on. */
+  /* The page ground: the chat's own background. */
   --stage-ground: var(--background);
 
   position: relative;
@@ -5747,120 +5740,36 @@ html.lenis body {
   background: var(--stage-ground);
 }
 
-:root.dark .chat-loading,
-.dark .chat-loading {
-   --stage-cone-1: oklch(1 0 0 / 0.12);
-   --stage-cone-2: oklch(1 0 0 / 0.068);
-   --stage-cone-3: oklch(1 0 0 / 0.024);
-   --stage-pool: oklch(1 0 0 / 0.12);
-   --stage-pool-spill: oklch(1 0 0 / 0.045);
-  /* Deeper here, and it is not decoration: `--background` is 0.155, which is
-     a long way from black, and a cone needs somewhere darker than itself to
-     fall into or it reads as fog. */
-  --stage-vignette: oklch(0 0 0 / 0.5);
-  /* A stop and a half under `--background`. A cone needs somewhere darker
-     than itself to fall into, and 0.155 is a long way from black — every
-     alpha above lands as grey haze on it rather than as light. The step is
-     small enough that arriving from the chat and leaving for it are not two
-     flashes of a different black. */
-  --stage-ground: oklch(0.128 0 0);
-  --stage-ring: oklch(1 0 0 / 0.13);
-   --stage-ring-hot: oklch(1 0 0 / 0.9);
-  --stage-grain: 0.035;
-}
-
-/* Vignette first, grain over it — grain under a vignette gets washed out at
-   exactly the edges where it is doing the most work. The grain is here for
-   banding, not for texture: a 40rem gradient at these alphas steps visibly on
-   an 8-bit panel, and a couple of percent of noise is what hides the steps. */
-.chat-loading::before,
-.chat-loading::after {
-  content: "";
+/* The pattern is an absolutely positioned overlay, exactly like PageContainer
+   renders it: full-bleed under the content, faded toward the edges by the
+   same mask `.bg-pattern-fade` uses. A real element (`.chat-loading__pattern`)
+   because the pseudo-elements are reserved below. */
+.chat-loading__pattern {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  background-image: url("/patterns/grid.svg");
+  background-repeat: repeat;
+  background-size: 48px 48px;
+  -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+  opacity: var(--stage-pattern-opacity);
 }
 
-.chat-loading::before {
-  background: radial-gradient(
-    ellipse 78% 66% at 50% 42%,
-    transparent 0%,
-    var(--stage-vignette) 100%
-  );
+.dark .chat-loading__pattern {
+  background-image: url("/patterns/dark/grid.svg");
 }
 
-.chat-loading::after {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  opacity: var(--stage-grain);
-  mix-blend-mode: overlay;
+:root.dark .chat-loading,
+.dark .chat-loading {
+  --stage-ring: oklch(1 0 0 / 0.13);
+  --stage-ring-hot: oklch(1 0 0 / 0.9);
 }
 
-/* ── The light ──────────────────────────────────────────────────── */
-
-/* The fixture is out of frame; this is the cone it throws.
-
-   Swept about a point above the top edge (`at 50% -12%`), so it is already
-   open where it enters rather than converging to a point on screen — a cone
-   that comes to a point is a triangle, and a real one starts at the width of
-   its lens. The sides are soft for free: a beam's shoulders are a falloff in
-   *angle*, which is what a conic gradient interpolates.
-
-   The mask is the distance falloff and only that — how far the light carries,
-   as opposed to how wide it opens. It ramps in over the first eighth so the
-   cone is never cut off at full brightness by the top of the screen, and is
-   gone by 92% so the light finishes before the element does. */
-.chat-loading__cone {
-  position: absolute;
-  inset: 0 -12% auto -12%;
-  height: min(92vh, 46rem);
-  pointer-events: none;
-  background: conic-gradient(
-    from 150deg at 50% -55%,
-    transparent 0deg,
-    var(--stage-cone-3) 9deg,
-    var(--stage-cone-2) 19deg,
-    var(--stage-cone-1) 27deg,
-    var(--stage-cone-1) 33deg,
-    var(--stage-cone-2) 41deg,
-    var(--stage-cone-3) 51deg,
-    transparent 60deg
-  );
-  mask-image: linear-gradient(
-    180deg,
-    transparent 0%,
-    oklch(0 0 0 / 0.5) 10%,
-    #000 42%,
-    oklch(0 0 0 / 0.38) 72%,
-    transparent 94%
-  );
-  -webkit-mask-image: linear-gradient(
-    180deg,
-    transparent 0%,
-    oklch(0 0 0 / 0.5) 10%,
-    #000 42%,
-    oklch(0 0 0 / 0.38) 72%,
-    transparent 94%
-  );
-}
-
-/* Where the cone lands. Anchored on the words rather than at the top, because
-   it is the light *around* the object rather than the light falling *past*
-   it — without it the type sits in a beam that never arrives anywhere, which
-   is the same nothing as a bloom with no source. */
-.chat-loading__pool {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: min(120vw, 44rem);
-  height: min(58vh, 20rem);
-  translate: -50% -52%;
-  pointer-events: none;
-  /* Two stops from the same centre — where the beam actually lands, and the
-     spill around it. One ellipse alone is a flat oval; the pair is a falloff,
-     and the difference is the whole distance between light and a smudge. */
-  background:
-    radial-gradient(36% 44% at 50% 47%, var(--stage-pool) 0%, transparent 74%),
-    radial-gradient(58% 64% at 50% 52%, var(--stage-pool-spill) 0%, transparent 78%);
+/* Fallback for browsers without mask support: the pattern at reduced alpha
+   is still calmer than a hard grid edge cutting off mid-air. */
+@supports not (mask-image: radial-gradient(#000, transparent)) {
+  .chat-loading__pattern { opacity: calc(var(--stage-pattern-opacity) * 0.6); }
 }
 
 /* ── The words ──────────────────────────────────────────────────── */
@@ -5875,42 +5784,24 @@ html.lenis body {
   text-align: center;
 }
 
-/* Small pool directly behind indicator. It gives light visible focal point,
-   instead of leaving cone to illuminate empty space around label. */
-.chat-loading__stage::before {
-  content: "";
-  position: absolute;
-  top: -4rem;
-  left: 50%;
-  width: 13rem;
-  height: 10rem;
-  translate: -50% 0;
-  border-radius: 50%;
-  background: radial-gradient(ellipse, var(--stage-pool) 0%, var(--stage-pool-spill) 35%, transparent 74%);
-  opacity: 0.72;
-  pointer-events: none;
-}
-
-/* Restoring is replay work: broader, calmer wash. Connecting is a narrower
-   arrival beam, so state has visual meaning without adding color. */
+/* Restoring is replay work: the ring turns at the same pace but dimmer, so
+   state has visual meaning without adding colour. */
 .chat-loading[data-loading-mode="restoring"] {
-  --stage-pool: oklch(1 0 0 / 0.1);
-  --stage-pool-spill: oklch(1 0 0 / 0.038);
+  --stage-ring-hot: oklch(0.42 0 0 / 0.55);
 }
 
-.chat-loading[data-loading-mode="connecting"] .chat-loading__cone {
-  transform: scaleX(0.88);
-  transform-origin: 50% 0;
+.dark .chat-loading[data-loading-mode="restoring"] {
+  --stage-ring-hot: oklch(1 0 0 / 0.55);
 }
 
-/* A ring that catches the light, the way `.lp-arc` does on the landing, and
-   not the icon spinner the buttons use: on a screen whose only two materials
-   are light and type, a 20px glyph of a dashed circle is a third one.
+/* A ring, not the icon spinner the buttons use: on a screen whose only two
+   materials are grid and type, a 20px glyph of a dashed circle is a third
+   one.
 
-   The stroke is a conic gradient masked to a 1.5px donut — bright where it
-   faces the lamp above it, gone where it turns away — so the thing that is
-   spinning is an arc of light rather than a shape. Starts at 90deg so the lit
-   end is under the cone at rest. */
+   The stroke is a conic gradient masked to a 1.5px donut — bright at the
+   head, gone at the tail — so the thing that is spinning is an arc rather
+   than a shape. Starts at 90deg so the lit end starts pointing down. No
+   drop-shadow: there is no lamp here for a glow to belong to. */
 .chat-loading__spinner {
   width: 1.125rem;
   height: 1.125rem;
@@ -5925,7 +5816,6 @@ html.lenis body {
   mask-image: radial-gradient(farthest-side, transparent calc(100% - 1.5px), #000 calc(100% - 1.5px));
   -webkit-mask-image: radial-gradient(farthest-side, transparent calc(100% - 1.5px), #000 calc(100% - 1.5px));
   animation: chat-loading-spin 1.05s linear infinite;
-  filter: drop-shadow(0 0 0.65rem var(--stage-pool-spill));
 }
 
 /* The shimmer is the wait said in type: one pass across the line at the pace
@@ -5984,7 +5874,7 @@ html.lenis body {
   --digit-distance: 8px;
   --digit-stagger: 70ms;
   --digit-blur: 2px;
-  --digit-ease: cubic-bezier(0.34, 1.45, 0.64, 1);
+  --digit-ease: var(--ease-bounce-strong);
   --digit-dir-x: 0;
   --digit-dir-y: 1;
 }
@@ -6021,4 +5911,82 @@ html.lenis body {
 
 @media (prefers-reduced-motion: reduce) {
   .t-digit-group .t-digit { animation: none !important; }
+}
+
+/* Transitions.dev — Avatar group hover */
+
+/*
+  Usage:
+    <!-- Apply .t-avatar to each item in your group (avatar,
+         chip, badge, button — anything). Bring your own size,
+         shape, and stacking; this stylesheet only owns the
+         hover transform + transition. -->
+    <div class="t-avatar-group">
+      <div class="t-avatar"><!-- your item --></div>
+      <div class="t-avatar"><!-- your item --></div>
+      <!-- … -->
+    </div>
+
+  Wire-up (vanilla JS):
+    On `mouseenter` of any .t-avatar, walk every sibling and
+    set inline:
+      el.style.setProperty('--shift',
+        (lift * Math.pow(falloff, distance)).toFixed(3) + 'px');
+      el.style.setProperty('--scale-active',
+        i === activeIdx ? scale : 1);
+    Set transition-timing-function inline BEFORE the
+    variable writes — use --avatar-ease-in on hover-in and
+    --avatar-ease-out on the root's `mouseleave` (resets
+    --shift to 0 and --scale-active to 1).
+*/
+
+:root {
+  --avatar-lift: -4px;
+  --avatar-dur: 320ms;
+  --avatar-scale: 1.05;
+  --avatar-falloff: 0.45;
+  --avatar-ease-in: cubic-bezier(0.22, 1, 0.36, 1);
+  --avatar-ease-out: cubic-bezier(0.34, 3.85, 0.64, 1);
+}
+
+/* Hover-spring transition only — bring your own avatar/chip
+   styling (size, shape, border, stacking, background). */
+.t-avatar {
+  /* inline-block: transforms have no effect on inline boxes, and group
+     items are often bare spans. */
+  display: inline-block;
+  transform-origin: center;
+  /* translateY before scale so scale doesn't amplify the lift offset. */
+  transform:
+    translateY(var(--shift, 0px))
+    scale(var(--scale-active, 1));
+  transition: transform var(--avatar-dur) var(--avatar-ease-in);
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-avatar { transition: none !important; transform: none !important; }
+}
+
+/* Scrollbars reveal on hover — hidden until the cursor is over the region. */
+.scroll-hover {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.scroll-hover:hover {
+  scrollbar-color: var(--border) transparent;
+}
+.scroll-hover::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scroll-hover::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scroll-hover::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+}
+.scroll-hover:hover::-webkit-scrollbar-thumb {
+  background: var(--border);
 }

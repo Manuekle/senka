@@ -90,7 +90,7 @@ export function ProspectScene() {
         {threads.map((thread, index) => (
           <Row key={thread.who} style={at(index * 90)}>
             <Plate active={index === 0} className="size-8" icon={Target01Icon} />
-            <Mono className="min-w-0 flex-1 truncate text-muted-foreground transition-colors duration-500 group-hover:text-foreground">
+            <Mono className="min-w-0 flex-1 truncate text-muted-foreground transition-colors duration-200 group-hover:text-foreground">
               {thread.who}
             </Mono>
             {/* A fixed slot, so two chips of different lengths do not shuffle
@@ -98,7 +98,7 @@ export function ProspectScene() {
             <span className="relative h-6 w-[6.5rem] shrink-0">
               <span className="absolute inset-y-0 right-0 h-[3px] w-10 translate-y-2.5 rounded-full bg-foreground/12 transition-opacity duration-500 group-hover:opacity-0" />
               <Chip
-                className="absolute inset-y-0 right-0 translate-y-1 text-muted-foreground opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100"
+                className="absolute inset-y-0 right-0 translate-y-1 text-muted-foreground opacity-0 transition duration-500 group-hover:translate-y-0 group-hover:opacity-100"
                 style={at(160 + index * 90)}
               >
                 {t(thread.key)}
@@ -145,7 +145,7 @@ export function ApiScene() {
               of overshooting on a wide one. */}
           <div className="relative mx-4 h-px flex-1 bg-border">
             <Chip
-              className="absolute -top-4 left-0 text-muted-foreground opacity-60 transition-all duration-500 group-hover:left-[calc(100%-5.5rem)] group-hover:text-muted-foreground group-hover:opacity-100"
+              className="absolute -top-4 left-0 text-muted-foreground opacity-60 transition-[left,color,opacity] duration-500 group-hover:left-[calc(100%-5.5rem)] group-hover:text-muted-foreground group-hover:opacity-100"
               style={at(80)}
             >
               GET /stock
@@ -153,7 +153,7 @@ export function ApiScene() {
           </div>
 
           <div className="flex flex-col items-center gap-2">
-            <span className="lp-plate flex size-12 items-center justify-center rounded-xl text-muted-foreground transition-colors duration-500 group-hover:text-foreground">
+            <span className="lp-plate flex size-12 items-center justify-center rounded-xl text-muted-foreground transition-colors duration-200 group-hover:text-foreground">
               <HugeiconsIcon icon={WebhookIcon} size={21} strokeWidth={1.75} />
             </span>
             <Mono className="text-muted-foreground">{t("landing.capabilities.art.api.yourApi")}</Mono>
@@ -162,7 +162,7 @@ export function ApiScene() {
 
         <div className="mt-5 flex justify-center">
           <Chip
-            className="translate-y-2 text-muted-foreground opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100"
+            className="translate-y-2 text-muted-foreground opacity-0 transition duration-500 group-hover:translate-y-0 group-hover:opacity-100"
             icon={Tick02Icon}
             style={at(520)}
           >

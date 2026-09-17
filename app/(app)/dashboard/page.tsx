@@ -139,7 +139,7 @@ function DashboardPageContent() {
           </div>
           <a
             href="/chat"
-            className="hidden items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium shadow-[var(--shadow-inset)] transition-all duration-150 hover:border-input hover:bg-accent sm:inline-flex"
+            className="hidden items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium shadow-[var(--shadow-inset)] transition duration-150 hover:border-input hover:bg-accent sm:inline-flex"
           >
             <HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={1.75} />
             {t("dashboard.newChat")}
@@ -172,21 +172,21 @@ function DashboardPageContent() {
                 <div className="flex flex-wrap justify-center gap-3 pt-2">
                   <Link
                     href="/chat"
-                    className="inline-flex items-center gap-2 rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background shadow-[var(--shadow-soft)] transition-all duration-150 hover:opacity-90 active:translate-y-px"
+                    className="inline-flex items-center gap-2 rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background shadow-[var(--shadow-soft)] transition duration-150 hover:opacity-90 active:translate-y-px"
                   >
                     <HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={1.75} />
                     {t("dashboard.emptyStartChat")}
                   </Link>
                   <Link
                     href="/automations"
-                    className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium shadow-[var(--shadow-inset)] transition-all duration-150 hover:border-input hover:bg-accent"
+                    className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium shadow-[var(--shadow-inset)] transition duration-150 hover:border-input hover:bg-accent"
                   >
                     <HugeiconsIcon icon={AiElementsIcon} size={16} strokeWidth={1.75} />
                     {t("dashboard.emptyCreateAutomation")}
                   </Link>
                   <a
                     href="/settings"
-                    className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium shadow-[var(--shadow-inset)] transition-all duration-150 hover:border-input hover:bg-accent"
+                    className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium shadow-[var(--shadow-inset)] transition duration-150 hover:border-input hover:bg-accent"
                   >
                     <HugeiconsIcon icon={Settings01Icon} size={16} strokeWidth={1.75} />
                     {t("dashboard.emptyConfigureChannels")}
@@ -359,7 +359,7 @@ function DashboardPageContent() {
               <p className="text-sm text-muted-foreground">{t("dashboard.noChannelStatus")}</p>
               <a
                 href="/settings"
-                className="mt-3 inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium shadow-[var(--shadow-inset)] transition-all duration-150 hover:border-input hover:bg-accent"
+                className="mt-3 inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium shadow-[var(--shadow-inset)] transition duration-150 hover:border-input hover:bg-accent"
               >
                 <HugeiconsIcon icon={Settings01Icon} size={16} strokeWidth={1.75} />
                 {t("dashboard.emptyConfigureChannels")}
@@ -410,7 +410,7 @@ function DashboardPageContent() {
               <p className="text-sm text-muted-foreground">{t("dashboard.noChats")}</p>
               <a
                 href="/chat"
-                className="mt-3 inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium shadow-[var(--shadow-inset)] transition-all duration-150 hover:border-input hover:bg-accent"
+                className="mt-3 inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium shadow-[var(--shadow-inset)] transition duration-150 hover:border-input hover:bg-accent"
               >
                 <HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={1.75} />
                 {t("dashboard.emptyStartChat")}
@@ -465,7 +465,7 @@ function DashboardPageContent() {
               <p className="text-sm text-muted-foreground">{t("dashboard.noAutomations")}</p>
               <Link
                 href="/automations"
-                className="mt-3 inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium shadow-[var(--shadow-inset)] transition-all duration-150 hover:border-input hover:bg-accent"
+                className="mt-3 inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium shadow-[var(--shadow-inset)] transition duration-150 hover:border-input hover:bg-accent"
               >
                 <HugeiconsIcon icon={AiElementsIcon} size={16} strokeWidth={1.75} />
                 {t("dashboard.emptyCreateAutomation")}

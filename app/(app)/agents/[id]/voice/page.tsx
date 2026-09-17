@@ -13,8 +13,8 @@ import {
 import { HugeiconsIcon } from "@/components/icons/icon";
 import {
   AlertCircleIcon,
-  ArrowLeft02Icon,
-  ArrowRight02Icon,
+  ArrowLeft01Icon,
+  ArrowRight01Icon,
   CallOutgoing01Icon,
   TelephoneIcon,
   VolumeHighIcon,
@@ -157,7 +157,7 @@ export default function AgentVoicePage() {
                 aria-label={t("voice.backToAgents")}
                 className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               >
-                <HugeiconsIcon icon={ArrowLeft02Icon} size={16} strokeWidth={1.75} />
+                <HugeiconsIcon icon={ArrowLeft01Icon} size={16} strokeWidth={1.75} />
               </button>
             </TooltipTrigger>
             <TooltipContent side="bottom">{t("voice.backToAgents")}</TooltipContent>
@@ -986,7 +986,7 @@ function SavedCallsLink({ agentId }: { readonly agentId: string }) {
         </span>
         <HugeiconsIcon
           className="text-muted-foreground shrink-0"
-          icon={ArrowRight02Icon}
+          icon={ArrowRight01Icon}
           size={16}
           strokeWidth={1.75}
         />

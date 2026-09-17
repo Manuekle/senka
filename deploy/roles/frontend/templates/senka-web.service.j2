@@ -17,6 +17,10 @@ Environment=NEXT_TELEMETRY_DISABLED=1
 Environment=EVE_SELF_HOSTED=1
 Environment=PORT={{ web_port }}
 Environment=HOSTNAME=127.0.0.1
+# Caddy sits in front and appends the real peer to X-Forwarded-For, so the
+# rate limiter may read that one hop (lib/rate-limit.ts). Never set this on a
+# host that is reached directly.
+Environment=TRUSTED_PROXY_HOPS=1
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ExecStart=/usr/bin/pnpm start --port {{ web_port }} --hostname 127.0.0.1
 Restart=always

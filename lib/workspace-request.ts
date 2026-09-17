@@ -1,7 +1,19 @@
 import { activeBusinessId, listBusinesses } from "./business-scope";
 import { currentWorkspace, withWorkspace, WORKSPACE_COOKIE } from "./workspace-context";
+import { trustedSessionEmail } from "./session-header";
 
-/** Resolve the browser selection once. Public callbacks cannot select a business by cookie. */
+/**
+ * Resolve the workspace this request runs against.
+ *
+ * The browser's workspace cookie is a preference, not a permission: it
+ * selects among the workspaces the session's account is entitled to. The
+ * account itself comes from the header the middleware fills in after
+ * verifying the session cookie — never from an inbound header, which is
+ * dropped there and re-validated here. With no account to match against
+ * (tests, Eve's own callers), the cookie still decides, exactly as before.
+ *
+ * Public callbacks cannot select a business by cookie at all.
+ */
 export async function runWorkspaceRequest<T>(request: Request | undefined, run: () => Promise<T>): Promise<T | Response> {
   if (currentWorkspace()) return run();
   let cookie: string | undefined;
@@ -18,11 +30,21 @@ export async function runWorkspaceRequest<T>(request: Request | undefined, run: 
       try { const { cookies } = await import("next/headers"); cookie = (await cookies()).get(WORKSPACE_COOKIE)?.value; } catch { /* tests and non-HTTP callers */ }
     }
   }
-  const id = cookie ?? await activeBusinessId();
+
+  // Which workspaces this session may touch. The email arrives via the
+  // middleware-verified header; a session cookie fallback would need the
+  // store, and the header is the one place that already paid for the lookup.
   const { businesses } = await listBusinesses();
-  const selected = businesses.find((business) => business.id === id);
+  const accountEmail = request ? trustedSessionEmail(request.headers) : undefined;
+  const entitled = accountEmail
+    ? businesses.filter((business) => business.ownerEmail === accountEmail)
+    : undefined;
+
+  const id = cookie ?? (await activeBusinessId());
+  const pool = entitled && entitled.length > 0 ? entitled : businesses;
+  const selected = pool.find((business) => business.id === id);
   // Account/billing/business registry stay reachable to recover access or switch out.
-  const recovery = /^\/api\/(businesses|billing|auth)(\/|$)/.test(path);
+  const recovery = /^\/api\/(businesses|billing|auth|team)(\/|$)/.test(path);
   if (!selected || selected.access === "suspended") {
     if (recovery || !request) return withWorkspace("default", run);
     return Response.json({ code: "workspace_unavailable", error: "Workspace access is unavailable" }, { status: 403 });

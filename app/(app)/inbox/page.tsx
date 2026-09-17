@@ -34,6 +34,7 @@ import { useI18n, useT } from "@/lib/i18n/provider";
 import { countryOptions } from "@/lib/countries";
 import { relativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { csvCell, csvFile } from "@/lib/csv-export";
 import type { Contact, ContactStatus, ChannelId } from "@/lib/types";
 import { usePolling } from "@/lib/use-polling";
 
@@ -323,14 +324,13 @@ export default function InboxPage() {
   };
 
   const exportCSV = (list: Contact[]) => {
-    const header = "id,name,phone,email,channel,status,source,createdAt\n";
-    const rows = list
-      .map(
-        (c) =>
-          `${c.id},"${(c.name ?? "").replace(/"/g, '""')}","${c.phone ?? ""}","${c.email ?? ""}",${c.channel},${c.status},${c.source},${c.createdAt}`,
-      )
-      .join("\n");
-    const blob = new Blob([header + rows], { type: "text/csv;charset=utf-8;" });
+    const header = "id,name,phone,email,channel,status,source,createdAt\r\n";
+    const blob = csvFile(
+      header,
+      list.map((c) =>
+        [c.id, c.name, c.phone, c.email, c.channel, c.status, c.source, c.createdAt].map(csvCell),
+      ),
+    );
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -390,7 +390,7 @@ export default function InboxPage() {
                   <TooltipTrigger asChild>
                     <button
                       aria-label={t("inbox.exportCsv")}
-                      className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium shadow-[var(--shadow-inset)] transition-all duration-150 hover:border-input hover:bg-accent"
+                      className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium shadow-[var(--shadow-inset)] transition duration-150 hover:border-input hover:bg-accent"
                       onClick={() => exportCSV(filtered.length > 0 ? filtered : contacts)}
                       type="button"
                     >
@@ -403,7 +403,7 @@ export default function InboxPage() {
               )}
               <button
                 aria-label={t("inbox.createContact")}
-                className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium shadow-[var(--shadow-inset)] transition-all duration-150 hover:border-input hover:bg-accent"
+                className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium shadow-[var(--shadow-inset)] transition duration-150 hover:border-input hover:bg-accent"
                 onClick={() => setShowCreate(!showCreate)}
                 type="button"
               >

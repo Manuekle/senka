@@ -42,7 +42,7 @@ function TeamSkeleton({ label }: { readonly label: string }) {
   );
 }
 
-export function TeamPanel() {
+export function TeamPanel({ feedOnly = false, fill = false }: { readonly feedOnly?: boolean; readonly fill?: boolean }) {
   const { t } = useI18n();
   const [data, setData] = useState<TeamResponse | null>(null);
   const [error, setError] = useState<UiError | null>(null);
@@ -79,7 +79,7 @@ export function TeamPanel() {
 
   if (!data) {
     return (
-      <div className="space-y-4">
+      <div className={cn("space-y-4", fill && "flex min-h-0 flex-1 flex-col")}>
         <ErrorBanner error={error} onRetry={() => void load()} />
         {!error ? <TeamSkeleton label={t("agentTeam.loading")} /> : null}
       </div>
@@ -92,7 +92,11 @@ export function TeamPanel() {
   const validLimit = Number.isInteger(limit) && limit >= 1 && limit <= 100;
 
   return (
-    <div className="content-enter space-y-5">
+    <div className={cn("content-enter space-y-5", fill && "flex min-h-0 flex-1 flex-col")}>
+      {/* /working asks for feedOnly — the conversation only. The config (mode,
+          participants, daily limit) lives in /runtime's team tab and renders
+          there, never on the working screen. */}
+      {!feedOnly ? (
       <section className="space-y-4 rounded-xl border border-border bg-card p-5" aria-labelledby="team-title">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -151,11 +155,20 @@ export function TeamPanel() {
         {calls >= data.team.dailyLimit && <p role="status" className="text-sm">{t("agentTeam.budgetReached")}</p>}
         {data.team.droppedEvents > 0 && <p role="status" className="text-sm text-destructive">{t("agentTeam.overflow", { count: data.team.droppedEvents })}</p>}
       </section>
+      ) : null}
+      {feedOnly ? (
+        <ErrorBanner error={error} onDismiss={() => setError(null)} />
+      ) : null}
 
-      <section aria-labelledby="team-feed" className="space-y-3">
-        <h2 id="team-feed" className="text-sm font-medium">{t("agentTeam.feed")}</h2>
-        <TeamFeed team={data.team} agents={data.agents} />
+      {feedOnly ? (
+      <section
+        {...(fill ? { "aria-label": t("agentTeam.feed") } : { "aria-labelledby": "team-feed" })}
+        className={cn(fill ? "flex min-h-0 flex-1 flex-col" : "space-y-3")}
+      >
+        {!fill && <h2 id="team-feed" className="text-sm font-medium">{t("agentTeam.feed")}</h2>}
+        <TeamFeed team={data.team} agents={data.agents} fill={fill} />
       </section>
+      ) : null}
     </div>
   );
 }

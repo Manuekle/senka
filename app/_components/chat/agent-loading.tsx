@@ -9,21 +9,17 @@ import { useT } from "@/lib/i18n/provider";
  * The screen between clicking a conversation and reading it.
  *
  * It used to be a spinner and the words "Cargando agente…" on a flat page,
- * then a lit room — a lamp, a beam, dust in it, and a glass plate holding the
- * label. The plate was the mistake. A card drawn around a wait makes the wait
- * look like content that failed to arrive, and its border is where the light
- * stops, which is the one thing light never does.
+ * then a lit room — a cone thrown from a fixture above the screen, the pool
+ * it made where it landed, a vignette, grain in the light. The room was the
+ * mistake. A stage rig bolted onto a working screen reads as theatre, the
+ * grain cost a blend pass over the viewport on the screen people hit most
+ * often while waiting, and all of it was decoration standing between the
+ * person and the conversation they asked for.
  *
- * So: no surface at all. A cone thrown from a fixture above the top of the
- * screen, the pool it makes where it lands, a ring turning in it, and one
- * line of text the light travels across. It is the register Fig 06 works in
- * on the landing — the boxes came off those cards too, and what stayed was
- * the words.
- *
- * The light is built out of the same rig the marketing pages light with
- * (`.lp-spot`, `.lp-arc`): a conic cone rather than a blurred blob, and dead
- * still, because a light that pulses is a notification and a light that sits
- * still is a room.
+ * So: the chat's own ground, borrowed exactly. The grid pattern the
+ * conversation itself sits on, faded at the edges the same way, and above
+ * it only type and one small ring. It is the same room arriving, minus the
+ * theatre.
  *
  * ## What makes it informative rather than decorative
  *
@@ -31,9 +27,8 @@ import { useT } from "@/lib/i18n/provider";
  *   to the agent take different amounts of time, and a person who knows which
  *   one they are waiting on waits differently.
  * - The ring is the only thing claiming the app is still working, and it is
- *   the smallest thing on screen. The lighting does not spin or fill: a light
- *   that is simply on claims something is happening without pretending to
- *   measure how much is left.
+ *   the smallest thing on screen. It does not fill: a spinner that pretends
+ *   to measure progress lies about how much is left.
  * - After a few seconds a second line admits it is slow. A wait with no
  *   acknowledgement reads as a hang, and the next thing somebody does is
  *   reload — which, on this screen, throws away the replay in progress.
@@ -41,8 +36,8 @@ import { useT } from "@/lib/i18n/provider";
  *   reader instead of only the sighted.
  *
  * The scene is drawn in `app/globals.css` (`.chat-loading`), not in utility
- * classes: the cone, its pool and the ring are gradients and masks that only
- * make sense read together.
+ * classes: the pattern overlay and the ring are a mask and a gradient that
+ * only make sense read together.
  */
 
 /** When the wait stops being normal and starts needing an explanation. */
@@ -61,8 +56,9 @@ export function AgentLoading({ mode = "connecting" }: { readonly mode?: AgentLoa
 
   return (
     <div className="chat-loading" data-loading-mode={mode}>
-      <span aria-hidden className="chat-loading__cone" />
-      <span aria-hidden className="chat-loading__pool" />
+      {/* The chat's own grid, already on screen by the time the conversation
+          arrives — see `.chat-loading__pattern` in globals.css. */}
+      <span aria-hidden className="chat-loading__pattern" />
 
       <div className="chat-loading__stage">
         {/* Decoration, not a second live region: the label below already

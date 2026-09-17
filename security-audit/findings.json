@@ -1,0 +1,92 @@
+{
+  "audit": {
+    "target": "senka",
+    "scope": "source-only security audit (no dynamic exploitation)",
+    "date": "2026-09-17",
+    "validated": "pnpm typecheck clean; vitest failures identical to pre-change baseline (git-stash comparison)"
+  },
+  "summary": {
+    "total": 11,
+    "fixed": 11,
+    "open": 0
+  },
+  "findings": [
+    {
+      "id": "F-01",
+      "title": "SSRF in SEO audit fetches",
+      "severity": "critical",
+      "status": "fixed",
+      "fix": "lib/seo-audit.ts: guardedFetch resolves DNS per hop and refuses private/loopback/link-local targets; redirect:\"manual\" with max 5 hops so each hop is re-checked before the socket opens."
+    },
+    {
+      "id": "F-02",
+      "title": "SSRF via MCP server URL / client connection",
+      "severity": "critical",
+      "status": "fixed",
+      "fix": "lib/mcp-url.ts: rejects non-https, localhost, private ranges, IPv6 literals and every-numeric hosts at config time; lib/mcp-client.ts: assertAllowedDestination re-resolves DNS and re-checks every resolved address on every connection, redirect:\"error\" on fetch."
+    },
+    {
+      "id": "F-03",
+      "title": "Public webhook endpoints lack rate limiting",
+      "severity": "high",
+      "status": "fixed",
+      "fix": "app/api/leads/route.ts, app/api/automations/[id]/webhook/route.ts, voice-tools route share a \"public-webhook\" bucket (30 req / 10 min) backed by lib/rate-limit.ts."
+    },
+    {
+      "id": "F-04",
+      "title": "Automations webhook leaks existence via 404-before-auth and replays",
+      "severity": "high",
+    "status": "fixed",
+      "fix": "app/api/automations/[id]/webhook/route.ts: uniform 401 before any id lookup, shared rate-limit budget, and Idempotency-Key dedupe (validated, ASCII-printable, <=200 chars, 10 min in-memory TTL) so a retried delivery answers {replayed:true} instead of firing twice."
+    },
+    {
+      "id": "F-05",
+      "title": "Voice webhook acts on any workspace's agents",
+      "severity": "high",
+      "status": "fixed",
+      "fix": "app/api/webhooks/elevenlabs/tools/[agentId]/[tool]/route.ts: workspaceCandidates() resolves the default workspace plus registry businesses, the agent is looked up per-workspace through withWorkspace, and each tool run is pinned to the agent's workspace; runTool(request, specName, agentName) carries it through."
+    },
+    {
+      "id": "F-06",
+      "title": "Workspace switch cookie is trusted as authorization",
+      "severity": "high",
+      "status": "fixed",
+      "fix": "lib/workspace-request.ts: the workspace cookie is a preference only; entitlement is computed against the trusted session email, never the cookie, with /api/team added to the recovery paths."
+    },
+    {
+      "id": "F-07",
+      "title": "Owner-only routes and exports lacked an owner check",
+      "severity": "high",
+      "status": "fixed",
+      "fix": "middleware.ts strips any inbound x-senka-session and sets it itself from the resolved session account (lib/session-header.ts); lib/owner-gate.ts requireOwner applied to /api/settings/export, /api/settings/import and /api/team; lib/owner-email.ts resolves the owner from STEVE_OWNER_EMAIL, the first DB account or ~/.senka/auth.json — fail-closed, with warmOwnerEmail() for the DB path; BusinessEntry.ownerEmail stamped on createBusiness."
+    },
+    {
+      "id": "F-08",
+      "title": "Client IP spoofable behind proxy (TRUSTED_PROXY_HOPS)",
+      "severity": "medium",
+      "status": "fixed",
+      "fix": "lib/rate-limit.ts: TRUSTED_PROXY_HOPS defaults to 0 (client = socket peer); the enterprise deploy template sets TRUSTED_PROXY_HOPS=1 explicitly where a reverse proxy is guaranteed."
+    },
+    {
+      "id": "F-09",
+      "title": "CSV formula injection in exports",
+      "severity": "medium",
+      "status": "fixed",
+      "fix": "lib/csv-export.ts csvCell() quotes, doubles quotes and prefixes '=+@/tab/CRLF-hyphen cells with an apostrophe (both Excel and Sheets skip it on open); csvFile() adds the UTF-8 BOM and CRLF endings. Used by inbox, pipeline and CRM exports."
+    },
+    {
+      "id": "V-01",
+      "title": "Middleware isPublic prefix-matching ambiguity",
+      "severity": "low",
+      "status": "fixed",
+      "fix": "middleware.ts: matching is segment-anchored (entry equals pathname or pathname opens with entry + '/'); tests/middleware-public.test.ts pins /api/auth vs /api/authorize, /api/health vs /api/healthcheck, /api/billing/webhook vs /api/billing/webhook-replay. The vitest matcher stays as it was: the proposed anchor tightening makes next's compiled _next internals public, so it needs in-app validation first."
+    },
+    {
+      "id": "V-02",
+      "title": "/api/health discloses internals unauthenticated",
+      "severity": "low",
+      "status": "fixed",
+      "fix": "app/api/health/route.ts: unauthenticated callers get {ok:storeOk} only; the full body (version, queue depths, timings) is owner-gated."
+    }
+  ]
+}

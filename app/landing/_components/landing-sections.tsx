@@ -236,7 +236,7 @@ export function Principles() {
               <div className="flex items-center justify-between">
                 <FigureLabel>{principle.figure}</FigureLabel>
                 <HugeiconsIcon
-                  className="text-muted-foreground transition-colors duration-500 group-hover:text-foreground"
+                  className="text-muted-foreground transition-colors duration-200 group-hover:text-foreground"
                   icon={principle.icon}
                   size={16}
                   strokeWidth={1.5}

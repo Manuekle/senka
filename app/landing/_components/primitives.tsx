@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@/components/icons/icon";
-import { Add01Icon, ArrowRight02Icon, MouseLeftClick01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, ArrowRight01Icon, MouseLeftClick01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { TextReveal } from "@/components/motion/text-reveal";
 import { cn } from "@/lib/utils";
@@ -157,7 +157,7 @@ export function SectionIntro({
           >
             {cta.label}
             <HugeiconsIcon
-              icon={ArrowRight02Icon}
+              icon={ArrowRight01Icon}
               size={15}
               strokeWidth={2}
               className="transition-transform duration-200 ease-[var(--lp-ease)] group-hover:translate-x-1"

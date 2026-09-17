@@ -91,7 +91,7 @@ export function Plate({
 }) {
   return (
     <span
-      className={`lp-plate flex shrink-0 items-center justify-center rounded-[10px] transition-colors duration-500 ${
+      className={`lp-plate flex shrink-0 items-center justify-center rounded-[10px] transition-colors duration-200 ${
         tint ? "" : active ? "text-muted-foreground group-hover:text-foreground" : "text-muted-foreground"
       } ${className}`}
       data-tint={tint}

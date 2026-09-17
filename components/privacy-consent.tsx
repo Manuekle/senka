@@ -101,7 +101,7 @@ export function PrivacyConsent() {
     <div className="fixed right-4 bottom-4 z-40 max-w-[320px]">
       <Liquid blur={6} contrast={20} className="w-full">
         <div className={cn(
-          "rounded-2xl border border-border/50 bg-card text-foreground shadow-xl transition-all duration-300 ease-[cubic-bezier(0.34,1.35,0.64,1)]",
+          "rounded-2xl border border-border/50 bg-card text-foreground shadow-xl transition duration-300 ease-bounce",
           expanded ? "p-4" : showBanner ? "p-3" : "hidden",
         )}>
           {showBanner && !expanded && (

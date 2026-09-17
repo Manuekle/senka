@@ -40,7 +40,7 @@ export function SignOutButton({
         <button
           aria-label={t("auth.signOut")}
           className={cn(
-            "flex items-center gap-2 rounded-md px-2.5 py-1.5 font-medium text-destructive text-xs transition-all duration-150 hover:bg-destructive/10 hover:text-destructive",
+            "flex items-center gap-2 rounded-md px-2.5 py-1.5 font-medium text-destructive text-xs transition duration-150 hover:bg-destructive/10 hover:text-destructive",
             !showLabel && "px-1.5 py-1",
             className,
           )}

@@ -35,7 +35,7 @@ import { useT } from "@/lib/i18n/provider";
 import { cn } from "@/lib/utils";
 import type { ChatStatus, FileUIPart, SourceDocumentUIPart } from "ai";
 import { HugeiconsIcon } from "@/components/icons/icon";
-import { ArrowUp02Icon, Image01Icon, MonitorIcon, Add01Icon, StopIcon, Cancel01Icon } from "@hugeicons/core-free-icons";
+import { ArrowUp01Icon, Image01Icon, MonitorIcon, Add01Icon, StopIcon, Cancel01Icon } from "@hugeicons/core-free-icons";
 import { nanoid } from "nanoid";
 import type {
   ChangeEvent,
@@ -1200,7 +1200,7 @@ export const PromptInputSubmit = ({
 
   // A 4×4 dot grid read as a broken glyph in a 28px circular button, so the
   // in-flight state uses a spinner at the same 16px as the arrow it replaces.
-  let Icon = <HugeiconsIcon icon={ArrowUp02Icon} size={16} strokeWidth={1.75} />;
+  let Icon = <HugeiconsIcon icon={ArrowUp01Icon} size={16} strokeWidth={1.75} />;
 
   if (status === "submitted") {
     Icon = (

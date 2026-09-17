@@ -32,6 +32,7 @@ import { usePolling } from "@/lib/use-polling";
 import { moveContactTo } from "@/lib/contact-order";
 import { countByDay } from "@/lib/chart-data";
 import { contactSourceLabel, contactStatusLabel } from "@/lib/contact-labels";
+import { csvCell, csvFile } from "@/lib/csv-export";
 
 /** Skeleton for the CRM page — header, pipeline bar, search row, kanban board. */
 function CrmSkeleton() {
@@ -274,15 +275,12 @@ export default function CrmPage() {
 
   const exportCSV = () => {
     const header = "id,name,phone,email,channel,status,source,createdAt\r\n";
-    const rows = filteredContacts.map((contact) => [
-      contact.id, contact.name, contact.phone, contact.email,
-      contact.channel, contact.status, contact.source, contact.createdAt,
-    ].map((value) => {
-      const text = String(value ?? "");
-      const safe = /^[\s]*[=+\-@]|^[\t\r\n]/.test(text) ? `'${text}` : text;
-      return `"${safe.replace(/"/g, '""')}"`;
-    }).join(",")).join("\r\n");
-    const blob = new Blob(["\uFEFF", header, rows], { type: "text/csv;charset=utf-8" });
+    const blob = csvFile(
+      header,
+      filteredContacts.map((contact) =>
+        [contact.id, contact.name, contact.phone, contact.email, contact.channel, contact.status, contact.source, contact.createdAt].map(csvCell),
+      ),
+    );
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;

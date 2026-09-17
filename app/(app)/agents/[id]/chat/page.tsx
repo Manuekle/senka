@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@/components/icons/icon";
 import {
-  ArrowLeft02Icon,
+  ArrowLeft01Icon,
   BubbleChatIcon,
   Delete01Icon,
   Add01Icon,
@@ -406,7 +406,7 @@ export default function AgentChatPage() {
                 aria-label={t("voice.backToAgents")}
                 className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               >
-                <HugeiconsIcon icon={ArrowLeft02Icon} size={16} strokeWidth={1.75} />
+                <HugeiconsIcon icon={ArrowLeft01Icon} size={16} strokeWidth={1.75} />
               </button>
             </TooltipTrigger>
             <TooltipContent side="bottom">{t("voice.backToAgents")}</TooltipContent>

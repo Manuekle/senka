@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { HugeiconsIcon } from "@/components/icons/icon";
-import { ArrowLeft02Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
 import { MarketingShell, PageHeader } from "@/app/landing/_components/marketing-shell";
 import { PricingSimulator } from "@/app/pricing/_components/pricing-simulator";
 import styles from "@/app/landing/_components/editorial.module.css";
@@ -43,7 +43,7 @@ export function Simulator() {
                 className="group inline-flex min-h-6 items-center gap-1.5 text-sm font-medium text-foreground"
               >
                 <HugeiconsIcon
-                  icon={ArrowLeft02Icon}
+                  icon={ArrowLeft01Icon}
                   size={15}
                   strokeWidth={2}
                   className="transition-transform duration-200 ease-[var(--lp-ease)] group-hover:-translate-x-1"

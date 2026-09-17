@@ -1,4 +1,6 @@
+import { lookup } from "node:dns/promises";
 import { assertPublicHttpsUrl } from "./http-guard";
+import { isPrivateAddress } from "./web-page";
 import type { AuditIssue } from "./seo-audit-findings";
 import {
   failSeoAudit,
@@ -281,10 +283,44 @@ type FetchedPage = {
   readonly html?: string;
 };
 
+/** How many redirects one guarded fetch follows before giving up. Every hop
+ *  re-runs the SSRF checks, so a public URL that 302s to the metadata address
+ *  is refused there instead of fetched. */
+const MAX_REDIRECT_HOPS = 5;
+
+/** HTTPS on a public name, with the name resolved and checked before the
+ *  request — a hostname is not an address, and a public domain can point at
+ *  10.0.0.1. Same shape as lib/web-page.ts's fetch. */
+async function assertPublicDestination(raw: string): Promise<URL> {
+  const url = assertPublicHttpsUrl(raw);
+  const addresses = await lookup(url.hostname, { all: true, verbatim: true }).catch(() => {
+    throw new Error(`Could not resolve ${url.hostname}.`);
+  });
+  if (addresses.length === 0 || addresses.some((entry) => isPrivateAddress(entry.address))) {
+    throw new Error(`${url.hostname} resolves to a private address.`);
+  }
+  return url;
+}
+
+/** The fetch every crawl request goes through. `redirect: "manual"` with a
+ *  re-check per hop: `redirect: "follow"` would let the remote server choose
+ *  the next destination without it ever passing the guard. */
+async function guardedFetch(url: string, init: RequestInit): Promise<Response> {
+  let current = url;
+  for (let hop = 0; hop <= MAX_REDIRECT_HOPS; hop += 1) {
+    const target = await assertPublicDestination(current);
+    const response = await fetch(target, { ...init, redirect: "manual" });
+    if (response.status < 300 || response.status >= 400) return response;
+    const location = response.headers.get("location");
+    if (!location) return response;
+    current = new URL(location, target).toString();
+  }
+  throw new Error(`More than ${MAX_REDIRECT_HOPS} redirects.`);
+}
+
 async function fetchPage(url: string): Promise<FetchedPage> {
   try {
-    const response = await fetch(url, {
-      redirect: "follow",
+    const response = await guardedFetch(url, {
       signal: AbortSignal.timeout(PAGE_TIMEOUT_MS),
       headers: { "user-agent": USER_AGENT, accept: "text/html,application/xhtml+xml" },
     });
@@ -304,8 +340,7 @@ async function fetchPage(url: string): Promise<FetchedPage> {
 
 async function fetchRobots(origin: string): Promise<(path: string) => boolean> {
   try {
-    const response = await fetch(new URL("/robots.txt", origin), {
-      redirect: "follow",
+    const response = await guardedFetch(new URL("/robots.txt", origin).toString(), {
       signal: AbortSignal.timeout(PAGE_TIMEOUT_MS),
       headers: { "user-agent": USER_AGENT },
     });

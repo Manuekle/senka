@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@/components/icons/icon";
-import { ArrowRight02Icon, Mail01Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, Mail01Icon } from "@hugeicons/core-free-icons";
 import { type FormEvent, useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -129,7 +129,7 @@ export function SalesContactDialog({
             {t(triggerLabelKey)}
             <HugeiconsIcon
               className="transition-transform duration-200 ease-[var(--lp-ease)] group-hover:translate-x-1"
-              icon={ArrowRight02Icon}
+              icon={ArrowRight01Icon}
               size={15}
               strokeWidth={2}
             />

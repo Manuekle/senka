@@ -6,7 +6,7 @@ import { HugeiconsIcon } from "@/components/icons/icon";
 import {
   Add01Icon,
   Delete02Icon,
-  ArrowRight02Icon,
+  ArrowRight01Icon,
   InformationCircleIcon,
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
@@ -301,7 +301,7 @@ export function AgentSectionPanel({
           <Button asChild size="sm" variant="outline">
             <Link href={`/agents/${agentId}/voice`}>
               {t("builder.voiceOpen")}
-              <HugeiconsIcon icon={ArrowRight02Icon} size={14} strokeWidth={1.75} />
+              <HugeiconsIcon icon={ArrowRight01Icon} size={14} strokeWidth={1.75} />
             </Link>
           </Button>
         </div>

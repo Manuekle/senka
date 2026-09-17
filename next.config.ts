@@ -7,6 +7,21 @@ const nextConfig: NextConfig = {
   // start` and the existing systemd path still work unchanged, this only
   // adds the extra output alongside the normal build.
   output: "standalone",
+  /**
+   * next/image optimization of locally-served, operator-uploaded bytes. The
+   * logo and media-library routes carry a cache-busting `?v=` query, and once
+   * `localPatterns` is set at all, any local src not matching a pattern is
+   * rejected by the optimizer — so the query-carrying routes need to be listed
+   * here. `search` is omitted, which means any (or no) query string passes.
+   */
+  images: {
+    localPatterns: [
+      { pathname: "/api/businesses/**" },
+      { pathname: "/api/business-profile/logo" },
+      { pathname: "/api/media/**" },
+      { pathname: "/api/account/avatar" },
+    ],
+  },
   experimental: {
     // `/eve/*` reaches the agent through a rewrite (see `withEve` below), and
     // Next proxies rewrites with a 30-second socket timeout. An agent step

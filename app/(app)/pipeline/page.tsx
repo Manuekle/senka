@@ -36,6 +36,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useConfirmDialog } from "@/components/confirm-dialog";
 import { useToast } from "@/components/toast-provider";
 import { fetchJson, type UiError } from "@/lib/api-error-message";
+import { csvCell, csvFile } from "@/lib/csv-export";
 import {
   OPEN_STAGES,
   averageWonValue,
@@ -299,25 +300,21 @@ export default function PipelinePage() {
 
   const exportCSV = () => {
     const header = "id,title,contact,stage,value,currency,expectedCloseAt,createdAt\r\n";
-    const rows = filtered.map((deal) =>
-      [
-        deal.id,
-        deal.title,
-        contactName.get(deal.contactId) ?? "",
-        deal.stage,
-        deal.value,
-        deal.currency,
-        deal.expectedCloseAt,
-        deal.createdAt,
-      ]
-        .map((value) => {
-          const text = String(value ?? "");
-          const safe = /^[\s]*[=+\-@]|^[\t\r\n]/.test(text) ? `'${text}` : text;
-          return `"${safe.replace(/"/g, '""')}"`;
-        })
-        .join(","),
-    ).join("\r\n");
-    const blob = new Blob(["\uFEFF", header, rows], { type: "text/csv;charset=utf-8" });
+    const blob = csvFile(
+      header,
+      filtered.map((deal) =>
+        [
+          deal.id,
+          deal.title,
+          contactName.get(deal.contactId) ?? "",
+          deal.stage,
+          deal.value,
+          deal.currency,
+          deal.expectedCloseAt,
+          deal.createdAt,
+        ].map(csvCell),
+      ),
+    );
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;

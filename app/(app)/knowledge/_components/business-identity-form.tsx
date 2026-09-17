@@ -11,6 +11,7 @@ import { useI18n } from "@/lib/i18n/provider";
 import { useSound } from "@/components/sound-provider";
 import { useToast } from "@/components/toast-provider";
 import { useConfirmDialog } from "@/components/confirm-dialog";
+import Image from "next/image";
 import { fetchJson, readApiError, type UiError } from "@/lib/api-error-message";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import type { BusinessIdentity, BusinessIdentityFields } from "@/lib/business-profile-store";
@@ -317,11 +318,11 @@ export function LogoPreview({
   }
 
   return (
-    /* eslint-disable-next-line @next/next/no-img-element -- served by an API
-       route, not the image optimizer's static pipeline. */
-    <img
+    <Image
       src={`/api/business-profile/logo?v=${encodeURIComponent(identity.logo.updatedAt)}`}
       alt={identity.name || t("business.logo")}
+      width={112}
+      height={112}
       className={`shrink-0 rounded-xl border border-border bg-card object-contain p-1 ${className}`}
     />
   );

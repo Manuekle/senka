@@ -3,6 +3,7 @@ import { appShell } from "./app-shell";
 import { foundations } from "./foundations";
 import { lighting } from "./lighting";
 import { motionSection } from "./motion";
+import { petSection } from "./pet";
 import { uiControls } from "./ui-controls";
 import { uiOverlays } from "./ui-overlays";
 import type { Section } from "../_lib/types";
@@ -17,5 +18,6 @@ export function getCatalog(locale?: string): readonly Section[] {
     lighting(locale),
     aiElements(locale),
     appShell(locale),
+    petSection(locale),
   ];
 }

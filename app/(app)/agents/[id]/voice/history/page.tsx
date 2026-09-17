@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@/components/icons/icon";
-import { ArrowLeft02Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { Skeleton } from "@/components/ai-elements/skeleton";
@@ -104,7 +104,7 @@ export default function AgentCallHistoryPage() {
                 aria-label={t("voice.backToVoice")}
                 className="text-muted-foreground hover:bg-accent hover:text-foreground flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors"
               >
-                <HugeiconsIcon icon={ArrowLeft02Icon} size={16} strokeWidth={1.75} />
+                <HugeiconsIcon icon={ArrowLeft01Icon} size={16} strokeWidth={1.75} />
               </button>
             </TooltipTrigger>
             <TooltipContent side="bottom">{t("voice.backToVoice")}</TooltipContent>

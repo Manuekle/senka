@@ -27,6 +27,7 @@ import { useTheme } from "@/components/theme-provider";
 import { useSound } from "@/components/sound-provider";
 import { NAV_GROUPS } from "@/lib/nav-items";
 import { useI18n, useAppLocale } from "@/lib/i18n/provider";
+import { useModKey } from "@/lib/hooks/use-mod-key";
 import { cn } from "@/lib/utils";
 
 /**
@@ -55,6 +56,7 @@ export function CommandPalette({
   const router = useRouter();
   const { toggleTheme } = useTheme();
   const { enabled: soundEnabled, setEnabled: setSoundEnabled } = useSound();
+  const mod = useModKey();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -83,6 +85,7 @@ export function CommandPalette({
             type="button"
             onClick={() => setOpen(true)}
             aria-label={t("nav.search")}
+            aria-keyshortcuts="Meta+K Control+K"
             className={cn(
               "flex items-center rounded-lg border border-border bg-card/60 text-xs text-muted-foreground",
               "transition-colors duration-150 hover:border-input hover:bg-accent hover:text-foreground",
@@ -94,14 +97,17 @@ export function CommandPalette({
             {collapsed ? null : (
               <>
                 <span className="flex-1 text-left">{t("nav.search")}</span>
-                <kbd className="rounded border border-border bg-muted px-1 font-mono text-[10px] text-muted-foreground">
-                  ⌘K
+                <kbd
+                  aria-hidden="true"
+                  className="rounded border border-border bg-muted px-1 font-mono text-[10px] text-muted-foreground"
+                >
+                  {mod}K
                 </kbd>
               </>
             )}
           </button>
         </TooltipTrigger>
-        <TooltipContent side="right">{t("nav.search")} · ⌘K</TooltipContent>
+        <TooltipContent side="right">{t("nav.search")} · {mod}K</TooltipContent>
       </Tooltip>
 
       <CommandDialog
@@ -133,7 +139,7 @@ export function CommandPalette({
             <CommandItem value={t("nav.newChat")} onSelect={() => run(() => router.push("/"))}>
               <HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={1.75} />
               {t("nav.newChat")}
-              <CommandShortcut>⌘K</CommandShortcut>
+              <CommandShortcut>{mod}K</CommandShortcut>
             </CommandItem>
             <CommandItem
               value={t("palette.newAutomation")}

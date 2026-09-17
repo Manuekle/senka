@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { HugeiconsIcon } from "@/components/icons/icon";
 import {
-  ArrowLeft02Icon,
+  ArrowLeft01Icon,
   Coins01Icon,
   PieChartIcon,
   Robot01Icon,
@@ -252,10 +252,10 @@ export default function AiUsagePage() {
               className="group mb-3 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
             >
               <HugeiconsIcon
-                icon={ArrowLeft02Icon}
+                icon={ArrowLeft01Icon}
                 size={14}
                 strokeWidth={1.75}
-                className="transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-x-0.5"
+                className="transition-transform duration-200 ease-expo-out group-hover:-translate-x-0.5"
               />
               {t("aiUsage.back")}
             </Link>
@@ -299,7 +299,7 @@ export default function AiUsagePage() {
                   <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                     <div
                       className={cn(
-                        "h-full rounded-full transition-all duration-500",
+                        "h-full rounded-full transition-[width,background-color] duration-500",
                         percentUsed >= 90 ? "bg-destructive" : percentUsed >= 70 ? "bg-amber-500" : "bg-primary",
                       )}
                       style={{ width: `${percentUsed}%` }}

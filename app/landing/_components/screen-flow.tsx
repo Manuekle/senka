@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@/components/icons/icon";
-import { ArrowLeft02Icon, PanelLeftIcon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, PanelLeftIcon } from "@hugeicons/core-free-icons";
 import { FlowCanvas } from "@/components/ai-elements/flow-canvas";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useT } from "@/lib/i18n/provider";
@@ -89,7 +89,7 @@ export function FlowScreen({ compact = false }: { readonly compact?: boolean }) 
               aria-label={t("automations.backToList")}
               className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
             >
-              <HugeiconsIcon icon={ArrowLeft02Icon} size={16} strokeWidth={1.75} />
+              <HugeiconsIcon icon={ArrowLeft01Icon} size={16} strokeWidth={1.75} />
             </span>
 
             <div className="flex min-w-0 flex-1 items-center gap-2">

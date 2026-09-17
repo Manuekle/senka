@@ -4,9 +4,15 @@ import { bookCalendarEvent, checkCalendarSlots } from "@/lib/calendar";
 import { createCheckoutLink } from "@/lib/payments";
 import { RagError, searchKnowledge } from "@/lib/rag";
 import { setReminder } from "@/lib/reminder";
-import { getAgent, upsertChat, upsertContact } from "@/lib/business-store";
+import { getAgent, getAgentByElevenLabsAgentId, upsertChat, upsertContact } from "@/lib/business-store";
 import { sendWhatsAppText } from "@/lib/whatsapp-send";
 import { toCapabilityIds } from "@/lib/agent-capabilities";
+import { rateLimit } from "@/lib/rate-limit";
+import { withWorkspace } from "@/lib/workspace-context";
+import { readDocument } from "@/lib/doc-store";
+import { DEFAULT_BUSINESS_ID } from "@/lib/business-scope";
+
+type RegistryShape = { businesses: ReadonlyArray<{ id: string }> };
 import {
   VOICE_TOOL_SECRET_HEADER,
   getVoiceTool,
@@ -125,34 +131,37 @@ async function contactFromCall(
   return contact;
 }
 
-export const POST = withApiErrors(async function POST(
-  request: NextRequest,
-  context: { params: Promise<{ agentId: string; tool: string }> },
-) {
-  const { agentId, tool } = await context.params;
-
-  const spec = getVoiceTool(tool);
-  if (!spec) return refuse("Esa herramienta no existe en este sistema.");
-
-  const secret = await voiceToolsSecret();
-  if (!voiceSecretMatches(request.headers.get(VOICE_TOOL_SECRET_HEADER), secret)) {
-    // The only case where an HTTP status is the honest answer: this is not the
-    // agent asking, so there is nobody to read a sentence to.
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+/**
+ * The workspaces a voice tool may be answered from: the installation's own
+ * first, then every additional one the registry knows. The store is scoped by
+ * workspace, so the same agent id is not one record but one per workspace —
+ * which is exactly why the lookup runs inside each candidate instead of
+ * trusting whichever workspace the last browser click left active.
+ *
+ * Both ids the app answers to (its own `agent_*` and the ElevenLabs mirror)
+ * live in the same per-workspace list, so one pass finds the agent under
+ * either name.
+ */
+async function workspaceCandidates(): Promise<string[]> {
+  const workspaces = [DEFAULT_BUSINESS_ID];
+  try {
+    const registry = await readDocument<RegistryShape>("businesses");
+    for (const business of registry?.businesses ?? []) {
+      if (business.id !== DEFAULT_BUSINESS_ID && !workspaces.includes(business.id)) {
+        workspaces.push(business.id);
+      }
+    }
+  } catch {
+    // The registry is unreadable: the default workspace is still answered.
   }
+  return workspaces;
+}
 
-  const agent = await getAgent(agentId);
-  if (!agent) {
-    return refuse("Este agente ya no existe en el sistema. Avisale a la persona que no podés completar la acción.");
-  }
-
-  const allowed = toCapabilityIds(agent.tools);
-  if (allowed.length > 0 && !allowed.includes(spec.capability)) {
-    return refuse(
-      `No tenés habilitada la función "${spec.capability}". Decile a la persona que no podés hacerlo y no afirmes lo contrario.`,
-    );
-  }
-
+/** The tool itself, run inside the workspace its agent belongs to. Split out
+ *  of the handler so the pinning in POST wraps exactly this and nothing else;
+ *  the agent's name arrives with it, because the workspace-scoped store is
+ *  the only place it lives. */
+async function runTool(request: NextRequest, specName: string, agentName: string): Promise<Response> {
   let args: Record<string, unknown> = {};
   try {
     const body: unknown = await request.json();
@@ -161,7 +170,7 @@ export const POST = withApiErrors(async function POST(
     // A tool with no required arguments can legitimately arrive with no body.
   }
 
-  switch (spec.name) {
+  switch (specName) {
     case "check_availability": {
       const durationMin = num(args.duration_min, 30);
       const start = iso(args.start_iso) ?? new Date();
@@ -214,7 +223,7 @@ export const POST = withApiErrors(async function POST(
       const end = new Date(start.getTime() + durationMin * 60_000);
       // Saved before the booking: if Google refuses, the lead is still in the
       // CRM instead of existing only in a transcript nobody reads.
-      const contact = await contactFromCall(args, agent.name, `Pidió turno: ${summary}`);
+      const contact = await contactFromCall(args, agentName, `Pidió turno: ${summary}`);
 
       try {
         const booked = await bookCalendarEvent({
@@ -244,7 +253,7 @@ export const POST = withApiErrors(async function POST(
     }
 
     case "save_contact": {
-      const contact = await contactFromCall(args, agent.name, str(args.notes));
+      const contact = await contactFromCall(args, agentName, str(args.notes));
       if (!contact) return refuse("Necesito al menos un nombre, un teléfono o un email para guardar.");
       if (str(args.notes)) {
         await upsertContact({ id: contact.id, notes: str(args.notes) });
@@ -265,7 +274,7 @@ export const POST = withApiErrors(async function POST(
       }
       if (!message) return refuse("Necesito saber qué hay que recordarle.");
 
-      const contact = await contactFromCall(args, agent.name, `Recordatorio: ${message}`);
+      const contact = await contactFromCall(args, agentName, `Recordatorio: ${message}`);
       if (!contact) {
         return refuse(
           "Para programar un recordatorio necesito saber para quién es. Pedile el nombre y el teléfono, y volvé a intentarlo.",
@@ -296,7 +305,7 @@ export const POST = withApiErrors(async function POST(
       if (!amount || !productName) {
         return refuse("Necesito el importe y qué se está pagando antes de generar el link.");
       }
-      const contact = await contactFromCall(args, agent.name, `Link de pago: ${productName}`);
+      const contact = await contactFromCall(args, agentName, `Link de pago: ${productName}`);
       const created = await createCheckoutLink({
         amount,
         currency: str(args.currency) ?? "usd",
@@ -356,7 +365,7 @@ export const POST = withApiErrors(async function POST(
 
     case "transfer_to_human": {
       const reason = str(args.reason) ?? "Pidió hablar con una persona.";
-      const contact = await contactFromCall(args, agent.name, reason);
+      const contact = await contactFromCall(args, agentName, reason);
       if (!contact) {
         return refuse(
           "Para pasar el caso a una persona necesito al menos un nombre o un teléfono. Pedíselos.",
@@ -378,4 +387,61 @@ export const POST = withApiErrors(async function POST(
       });
     }
   }
+
+  return refuse("Esa herramienta no está disponible para este agente.");
+}
+
+export const POST = withApiErrors(async function POST(
+  request: NextRequest,
+  context: { params: Promise<{ agentId: string; tool: string }> },
+) {
+  const { agentId, tool } = await context.params;
+
+  // The shared secret is the same for every agent's tools, so what bounds a
+  // leaked URL beyond it is the budget — per address, shared with the other
+  // public webhooks.
+  if (!rateLimit("public-webhook", request, { max: 30, windowMs: 10 * 60_000 }).allowed) {
+    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+  }
+
+  const spec = getVoiceTool(tool);
+  if (!spec) return refuse("Esa herramienta no existe en este sistema.");
+
+  const secret = await voiceToolsSecret();
+  if (!voiceSecretMatches(request.headers.get(VOICE_TOOL_SECRET_HEADER), secret)) {
+    // The only case where an HTTP status is the honest answer: this is not the
+    // agent asking, so there is nobody to read a sentence to.
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  // The workspace follows the agent, not the browser: whichever business the
+  // operator last had open must not decide whose CRM a caller's turno lands
+  // in. The URL may name either id the app answers to — its own or the
+  // ElevenLabs mirror's — so both are tried, and either way the agent is
+  // looked up inside each candidate workspace. Same file or table, a
+  // different row.
+  type AgentRecord = NonNullable<Awaited<ReturnType<typeof getAgent>>>;
+  let found: { readonly agent: AgentRecord; readonly workspace: string } | undefined;
+  for (const workspace of await workspaceCandidates()) {
+    const record = await withWorkspace(workspace, () => getAgent(agentId) ?? getAgentByElevenLabsAgentId(agentId));
+    if (record) {
+      found = { agent: record, workspace };
+      break;
+    }
+  }
+  if (!found) {
+    return refuse("Este agente ya no existe en el sistema. Avisale a la persona que no podés completar la acción.");
+  }
+  const { agent, workspace: agentWorkspace } = found;
+
+  const allowed = toCapabilityIds(agent.tools);
+  if (allowed.length > 0 && !allowed.includes(spec.capability)) {
+    return refuse(
+      `No tenés habilitada la función "${spec.capability}". Decile a la persona que no podés hacerlo y no afirmes lo contrario.`,
+    );
+  }
+
+  // Everything the tool reads and writes now belongs to the agent's own
+  // business; the installation's active-business pointer is not consulted.
+  return withWorkspace(agentWorkspace, () => runTool(request, spec.name, agent.name));
 });

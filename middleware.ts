@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { SESSION_COOKIE, verifySession } from "@/lib/auth/store";
+import { SESSION_COOKIE, getSessionAccountEmail, verifySession } from "@/lib/auth/store";
+import { SESSION_ACCOUNT_HEADER } from "@/lib/session-header";
 
 /**
  * The gate.
@@ -125,7 +126,11 @@ const WEBHOOK = /^\/api\/automations\/[^/]+\/webhook\/?$/;
  *  module scope, because the value cannot change between requests. */
 const DEV_ROUTES_OPEN = process.env.NODE_ENV !== "production";
 
-function isPublic(pathname: string): boolean {
+/** Segment-anchored, unlike a bare `startsWith`: `/api/auth` must cover
+ *  `/api/auth/x` and never `/api/authlogin`. An entry matches its exact path
+ *  or its `/`-subtree, nothing else — this is exported for the test that
+ *  keeps that invariant honest (tests/middleware-public.test.ts). */
+export function isPublic(pathname: string): boolean {
   if (
     DEV_ROUTES_OPEN &&
     (pathname === "/dev" ||
@@ -148,7 +153,15 @@ export async function middleware(request: NextRequest) {
   if (isPublic(pathname)) return NextResponse.next();
 
   if (await verifySession(request.cookies.get(SESSION_COOKIE)?.value)) {
-    return NextResponse.next();
+    // The verified session's account email travels as a header so owner-only
+    // routes can gate on it without a second store read. The client's own
+    // copy of that header is dropped first — this is the header's only
+    // writer, and nothing downstream may trust an inbound value.
+    const accountEmail = await getSessionAccountEmail(request.cookies.get(SESSION_COOKIE)?.value);
+    const headers = new Headers(request.headers);
+    headers.delete(SESSION_ACCOUNT_HEADER);
+    if (accountEmail) headers.set(SESSION_ACCOUNT_HEADER, accountEmail);
+    return NextResponse.next({ request: { headers } });
   }
 
   // An API call gets a status it can act on. Bouncing `fetch` to an HTML login

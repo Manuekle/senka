@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { HugeiconsIcon, type IconSvgElement } from "@/components/icons/icon";
 import {
-  ArrowLeft02Icon,
+  ArrowLeft01Icon,
   CheckmarkCircle02Icon,
   BanIcon,
   Facebook01Icon,
@@ -149,7 +149,7 @@ function ChoiceCard({
       data-cuelume-hover="tick"
       data-cuelume-press
       className={cn(
-        "relative flex w-full flex-col items-start gap-1 rounded-xl border p-4 text-left transition-all duration-150",
+        "relative flex w-full flex-col items-start gap-1 rounded-xl border p-4 text-left transition duration-150",
         "hover:border-foreground/25 hover:bg-accent active:scale-[0.99]",
         selected
           ? "border-foreground/40 bg-accent shadow-[var(--shadow-inset)]"
@@ -284,7 +284,7 @@ function NewForm() {
                 size="sm"
                 onClick={() => (question === 1 ? router.push("/forms") : setQuestion(1))}
               >
-                <HugeiconsIcon icon={ArrowLeft02Icon} size={16} strokeWidth={1.75} />
+                <HugeiconsIcon icon={ArrowLeft01Icon} size={16} strokeWidth={1.75} />
                 {t("forms.wizard.back")}
               </Button>
               <Button
@@ -336,7 +336,7 @@ function NewForm() {
                 size="sm"
                 onClick={() => (skipQuestions ? router.push("/forms") : setQuestion(2))}
               >
-                <HugeiconsIcon icon={ArrowLeft02Icon} size={16} strokeWidth={1.75} />
+                <HugeiconsIcon icon={ArrowLeft01Icon} size={16} strokeWidth={1.75} />
                 {t("forms.wizard.back")}
               </Button>
               <Button onClick={() => void create()} disabled={busy}>

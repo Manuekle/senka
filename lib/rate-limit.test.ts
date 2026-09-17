@@ -24,10 +24,18 @@ afterEach(() => {
 });
 
 describe("clientIp", () => {
-  // The bug the shared module fixes: both inline limiters read entry [0], and
-  // a caller can put anything there. Caddy appends, so the truthful entry is
-  // the last one.
+  // The default changed with the fix for the forgeable-key finding: nothing
+  // proxies this process unless the deploy says so, so X-Forwarded-For is
+  // ignored and a client-seeded entry can no longer choose the key an
+  // account's limits hang from.
+  it("ignores a caller-seeded X-Forwarded-For unless a proxy is declared", () => {
+    const forwarded = request({ "x-forwarded-for": "1.1.1.1, 203.0.113.7", "x-real-ip": "198.51.100.1" });
+    expect(clientIp(forwarded)).toBe("198.51.100.1");
+  });
+
+  // With exactly one trusted hop the truthful entry is the last one.
   it("reads the entry the nearest proxy appended, not the one the caller claimed", () => {
+    process.env.TRUSTED_PROXY_HOPS = "1";
     const forwarded = request({ "x-forwarded-for": "1.1.1.1, 203.0.113.7" });
     expect(clientIp(forwarded)).toBe("203.0.113.7");
   });

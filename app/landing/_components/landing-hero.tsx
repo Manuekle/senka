@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@/components/icons/icon";
-import { ArrowRight02Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -58,7 +58,7 @@ export function LandingHero() {
             <Badge className="px-2 py-0.5 text-[10px]">{t("landing.hero.badge")}</Badge>
             <span className="text-muted-foreground">{t("landing.hero.announcement")}</span>
             <HugeiconsIcon
-              icon={ArrowRight02Icon}
+              icon={ArrowRight01Icon}
               size={13}
               strokeWidth={2}
               className="text-muted-foreground transition-transform duration-200 ease-[var(--lp-ease)] group-hover:translate-x-0.5"

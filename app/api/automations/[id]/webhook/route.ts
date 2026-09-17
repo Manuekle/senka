@@ -9,6 +9,26 @@ import {
 import type { LeadInput } from "@/lib/types";
 import { type NextRequest, NextResponse } from "next/server";
 import { apiError, withApiErrors } from "@/lib/api-error";
+import { rateLimit } from "@/lib/rate-limit";
+
+/** Completed webhook deliveries, for the `Idempotency-Key` retry contract.
+ *  In memory, per process: a restart loses the set, which means a retried
+ *  delivery may run twice across a redeploy — the same at-most-once horizon
+ *  the route had before the header existed, now at least bounded within one
+ *  process lifetime. */
+const seenDeliveries = new Map<string, number>();
+const IDEMPOTENCY_TTL_MS = 10 * 60_000;
+
+/** True when this key was already processed; remembers it otherwise. */
+function alreadyProcessed(key: string): boolean {
+  const now = Date.now();
+  for (const [entry, at] of seenDeliveries) {
+    if (now - at > IDEMPOTENCY_TTL_MS) seenDeliveries.delete(entry);
+  }
+  if (seenDeliveries.has(key)) return true;
+  seenDeliveries.set(key, now);
+  return false;
+}
 
 /** Constant-time-ish comparison, so a wrong token can't be probed byte by byte. */
 function secretsMatch(a: string, b: string): boolean {
@@ -26,30 +46,49 @@ function secretsMatch(a: string, b: string): boolean {
 export const POST = withApiErrors(async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
 
+  // The budget comes first: the id lookup below is an existence oracle (an
+  // unknown id and a known id with a bad secret answer differently), and a
+  // caller with neither the id nor the token should not get to enumerate
+  // either. Same bucket as /api/leads — one leaked webhook URL is one
+  // address's worth of traffic.
+  if (!rateLimit("public-webhook", request, { max: 30, windowMs: 10 * 60_000 }).allowed) {
+    return apiError("rate_limited");
+  }
+
+  // A sender that retries on timeout can fire the automation twice — and the
+  // steps message people. An `Idempotency-Key` makes the retry a no-op. The
+  // replay answer is deliberately bare: nothing from the first run is
+  // replayed to a caller who may not be the one that sent it.
+  const idempotencyKey = request.headers.get("Idempotency-Key")?.trim();
+  if (idempotencyKey) {
+    if (idempotencyKey.length > 200 || !/^[\x21-\x7e]+$/.test(idempotencyKey)) {
+      return apiError("invalid_field", { field: "Idempotency-Key" });
+    }
+    if (alreadyProcessed(`${id}:${idempotencyKey}`)) {
+      return NextResponse.json({ ok: true, replayed: true });
+    }
+  }
+
+  // The secret check moves ahead of the lookup: with the token verified
+  // first, every unauthorised caller gets the same answer whether or not the
+  // id exists, so the response cannot be used to enumerate automation ids.
+  // Both "no such automation" and "wrong token" share one message for the
+  // same reason.
+  const provided = request.headers.get("x-webhook-secret");
   const automations = await listAutomations();
   const automation = automations.find((a) => a.id === id);
-  if (!automation) {
-    return apiError("not_found");
-  }
-  if (automation.trigger !== "webhook") {
-    return apiError("conflict", { message: "This automation is not webhook-triggered." });
-  }
-  // The token is mandatory. This route is public (a third-party dashboard
-  // cannot send a session cookie) and running an automation sends WhatsApp
-  // messages, emails and payment links on the operator's behalf — so an
-  // automation with no token is not an open endpoint, it is a broken one.
-  // Automations saved through the API get a token generated for them; one
-  // that predates that gets this error instead of running for anybody.
-  const token = automation.triggerValue?.trim();
-  if (!token) {
+  if (!automation || automation.trigger !== "webhook") {
     return apiError("unauthorized", {
       message:
-        "This webhook automation has no secret token. Re-save it in Automations to have one generated, then send it as the x-webhook-secret header.",
+        "Send this automation's webhook token as the x-webhook-secret header. If the automation has no token yet, re-save it in Automations to have one generated.",
     });
   }
-  const provided = request.headers.get("x-webhook-secret");
-  if (!provided || !secretsMatch(provided, token)) {
-    return apiError("unauthorized");
+  const token = automation.triggerValue?.trim();
+  if (!token || !provided || !secretsMatch(provided, token)) {
+    return apiError("unauthorized", {
+      message:
+        "Send this automation's webhook token as the x-webhook-secret header. If the automation has no token yet, re-save it in Automations to have one generated.",
+    });
   }
   if (automation.status !== "active") {
     return apiError("conflict", { message: "This automation is not active." });

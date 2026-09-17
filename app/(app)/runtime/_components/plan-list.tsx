@@ -6,7 +6,7 @@ import {
   CancelCircleIcon,
   Loading03Icon,
   CircleIcon,
-  ArrowRight02Icon,
+  ArrowRight01Icon,
 } from "@hugeicons/core-free-icons";
 import { Card } from "../../../_components/dashboard-card";
 import { SkeletonBar } from "@/components/ai-elements/skeleton";
@@ -39,7 +39,7 @@ const STEP_TONE: Record<
   },
   done: { icon: CheckmarkCircle02Icon, text: "text-[color:var(--status-success-fg)]" },
   failed: { icon: CancelCircleIcon, text: "text-[color:var(--status-failed-fg)]" },
-  skipped: { icon: ArrowRight02Icon, text: "text-muted-foreground" },
+  skipped: { icon: ArrowRight01Icon, text: "text-muted-foreground" },
 };
 
 function PlanCard({ plan, locale }: { readonly plan: RunPlan; readonly locale: Locale }) {

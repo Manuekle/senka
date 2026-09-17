@@ -32,20 +32,24 @@ const buckets = new Map<string, Map<string, Window>>();
  * the only one a proxy we operate wrote. Counting from the right by the number
  * of proxies in front of this process is what makes the key unforgeable.
  *
- * `TRUSTED_PROXY_HOPS` is that number — 1 for the Caddy in deploy/, 1 on
- * Vercel. Set it to 0 when nothing proxies this process, and the header is
- * ignored entirely.
+ * `TRUSTED_PROXY_HOPS` is that number — 1 for the Caddy in deploy/ (the
+ * systemd unit sets it) and 1 on Vercel. The default here is 0: nothing
+ * proxies this process, the header is ignored entirely, and a caller seeding
+ * the header cannot choose the key an account's limits hang from. A deploy
+ * that adds a proxy without raising the value keeps the safe (if coarser)
+ * behaviour of limiting on the direct peer instead.
  */
 export function clientIp(request: NextRequest): string {
-  const hops = Number(process.env.TRUSTED_PROXY_HOPS ?? "1");
-  const forwarded = (request.headers.get("x-forwarded-for") ?? "")
-    .split(",")
-    .map((entry) => entry.trim())
-    .filter(Boolean);
-
-  if (Number.isFinite(hops) && hops > 0 && forwarded.length > 0) {
-    // hops=1 -> the last entry, which the nearest proxy appended.
-    return forwarded[Math.max(0, forwarded.length - hops)] ?? forwarded[0];
+  const hops = Number(process.env.TRUSTED_PROXY_HOPS ?? "0");
+  if (Number.isFinite(hops) && hops > 0) {
+    const forwarded = (request.headers.get("x-forwarded-for") ?? "")
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+    if (forwarded.length > 0) {
+      // hops=1 -> the last entry, which the nearest proxy appended.
+      return forwarded[Math.max(0, forwarded.length - hops)] ?? forwarded[0];
+    }
   }
   return request.headers.get("x-real-ip")?.trim() || "unknown";
 }

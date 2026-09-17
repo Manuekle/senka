@@ -3,7 +3,7 @@
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { HugeiconsIcon } from "@/components/icons/icon";
-import { ArrowRight02Icon, Coins01Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, Coins01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { SkeletonBar } from "@/components/ai-elements/skeleton";
@@ -132,7 +132,7 @@ export function CreditsOverviewCard() {
           <div className="h-full overflow-hidden rounded-full bg-muted shadow-[var(--shadow-inset)]">
             <div
               className={cn(
-                "h-full rounded-full bg-gradient-to-r transition-[width] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]",
+                "h-full rounded-full bg-gradient-to-r transition-[width] duration-500 ease-expo-out",
                 percentLeft <= CRITICAL_PERCENT
                   ? "from-destructive/35 to-destructive"
                   : isLow
@@ -188,10 +188,10 @@ export function CreditsOverviewCard() {
           >
             {t("account.creditsViewUsage")}
             <HugeiconsIcon
-              icon={ArrowRight02Icon}
+              icon={ArrowRight01Icon}
               size={14}
               strokeWidth={1.75}
-              className="transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-x-0.5"
+              className="transition-transform duration-200 ease-expo-out group-hover:translate-x-0.5"
             />
           </Link>
         </div>

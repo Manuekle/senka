@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { HugeiconsIcon } from "@/components/icons/icon";
-import { ArrowLeft02Icon, ArrowRight02Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { SlidingTabs } from "@/components/ai-elements/sliding-tabs";
 import { useSound } from "@/components/sound-provider";
 import { useT } from "@/lib/i18n/provider";
@@ -107,7 +107,7 @@ export function Pagination({
             onClick={() => goTo(page - 1)}
             type="button"
           >
-            <HugeiconsIcon icon={ArrowLeft02Icon} size={14} strokeWidth={2} />
+            <HugeiconsIcon icon={ArrowLeft01Icon} size={14} strokeWidth={2} />
             <span className="hidden sm:inline">{t("pagination.prev")}</span>
           </button>
 
@@ -151,7 +151,7 @@ export function Pagination({
             type="button"
           >
             <span className="hidden sm:inline">{t("pagination.next")}</span>
-            <HugeiconsIcon icon={ArrowRight02Icon} size={14} strokeWidth={2} />
+            <HugeiconsIcon icon={ArrowRight01Icon} size={14} strokeWidth={2} />
           </button>
         </nav>
       ) : null}

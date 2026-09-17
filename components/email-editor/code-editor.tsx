@@ -1,12 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Editor, {
   type BeforeMount,
   type Monaco,
   type OnChange,
   type OnMount,
+  loader,
 } from "@monaco-editor/react";
+/* The npm build, not the loader's jsdelivr CDN. The namespace import sits
+   behind a dynamic `import()` (below) rather than at module scope: evaluating
+   monaco's ESM graph touches `window`, which killed the /email-templates
+   prerender. Deferred to an effect it also costs nothing until the component
+   mounts, and nothing at runtime comes from a third-party origin — workers
+   are bundled, not fetched from a CDN a future CSP would have to allow. */
 import type { editor } from "monaco-editor";
 import { useTheme } from "@/components/theme-provider";
 import { useT } from "@/lib/i18n/provider";
@@ -100,6 +107,23 @@ function defineThemes(monaco: Monaco): void {
 export function CodeEditor({ value, onChange, readOnly = false }: CodeEditorProps) {
   const t = useT();
   const { theme } = useTheme();
+  // Editor renders only once the bundled monaco has been handed to the loader;
+  // before that the same loading plate the bridge itself would show covers it.
+  const [monacoReady, setMonacoReady] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    void import("monaco-editor").then((monaco) => {
+      loader.config({
+        monaco: monaco as unknown as Parameters<typeof loader.config>[0]["monaco"],
+      });
+      if (alive) setMonacoReady(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   const monacoRef = useRef<Monaco | null>(null);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   // Read inside `onMount`, which is created once and would otherwise close
@@ -146,6 +170,14 @@ export function CodeEditor({ value, onChange, readOnly = false }: CodeEditorProp
   }, [theme]);
 
   const handleChange: OnChange = useCallback((next) => onChange(next ?? ""), [onChange]);
+
+  if (!monacoReady) {
+    return (
+      <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
+        {t("emailTemplates.editorLoading")}
+      </div>
+    );
+  }
 
   return (
     <Editor

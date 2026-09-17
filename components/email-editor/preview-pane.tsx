@@ -6,7 +6,7 @@ import {
   AlertCircleIcon,
   ArchiveArrowDownIcon,
   ArrowDown01Icon,
-  ArrowLeft02Icon,
+  ArrowLeft01Icon,
   Delete02Icon,
   FullSignalIcon,
   Mail02Icon,
@@ -15,6 +15,7 @@ import {
   SmileIcon,
   StarIcon,
 } from "@hugeicons/core-free-icons";
+import Image from "next/image";
 import { useT } from "@/lib/i18n/provider";
 import { useTheme } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
@@ -333,7 +334,7 @@ function Phone({
             // is what keeps the fade on the compositor — without it the
             // browser repaints the iframe every frame of the transition.
             opacity: visible ? 1 : 0.35,
-            transition: `opacity ${visible ? FADE_IN_MS : FADE_OUT_MS}ms cubic-bezier(0.2, 0, 0, 1)`,
+            transition: `opacity ${visible ? FADE_IN_MS : FADE_OUT_MS}ms var(--ease-expo-out)`,
             willChange: "opacity",
             display: "flex",
             flexDirection: "column",
@@ -360,7 +361,7 @@ function Phone({
             <div style={{ display: "flex", alignItems: "center", gap: 2, padding: "0 10px" }}>
               <TapTarget>
                 <HugeiconsIcon
-                  icon={ArrowLeft02Icon}
+                  icon={ArrowLeft01Icon}
                   size={26}
                   strokeWidth={1.8}
                   color={palette.tint}
@@ -643,13 +644,15 @@ function Phone({
         </div>
       </div>
 
-        {/* eslint-disable-next-line @next/next/no-img-element -- a fixed local
-            frame, sized entirely by CSS; next/image adds nothing here. */}
-        <img
+        {/* A fixed local frame, sized entirely by CSS; next/image adds nothing
+            here beyond the bundled copy. */}
+        <Image
           src="/frames/iphone17.png"
           alt=""
           aria-hidden
           draggable={false}
+          width={1508}
+          height={3278}
           className="pointer-events-none absolute inset-0 h-full w-full select-none"
           style={{ filter: "drop-shadow(0 22px 44px rgba(0,0,0,0.28))" }}
         />

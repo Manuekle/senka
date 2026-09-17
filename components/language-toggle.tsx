@@ -31,7 +31,7 @@ export function LanguageToggle({
           // Two languages, one switch — same cue as the theme control.
           data-cuelume-toggle
           className={cn(
-            "flex items-center gap-2 rounded-md px-2.5 py-1.5 text-xs font-medium transition-all duration-150 hover:bg-accent hover:text-foreground text-muted-foreground",
+            "flex items-center gap-2 rounded-md px-2.5 py-1.5 text-xs font-medium transition duration-150 hover:bg-accent hover:text-foreground text-muted-foreground",
             !showLabel && "px-1.5 py-1",
             className,
           )}

@@ -13,6 +13,7 @@ import {
   Video01Icon,
 } from "@hugeicons/core-free-icons";
 import { FileUpload, type FileUploadItem } from "@/components/motion/file-upload";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -60,11 +61,12 @@ function assetUrl(asset: MediaAsset): string {
 function Thumbnail({ asset }: { readonly asset: MediaAsset }) {
   if (asset.kind === "image") {
     return (
-      <img
+      <Image
         src={assetUrl(asset)}
         alt={asset.description || asset.name}
-        loading="lazy"
-        className="size-full object-cover"
+        fill
+        sizes="(max-width: 640px) 33vw, 300px"
+        className="object-cover"
       />
     );
   }

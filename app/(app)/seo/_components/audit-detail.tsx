@@ -113,7 +113,7 @@ function IssueGroupCard({
       {rest.length > 0 ? (
         <>
           <div
-            className="grid transition-[grid-template-rows] duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
+            className="grid transition-[grid-template-rows] duration-250 ease-smooth-out motion-reduce:transition-none"
             style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
           >
             <div className="overflow-hidden">

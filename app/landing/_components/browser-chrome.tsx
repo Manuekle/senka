@@ -3,9 +3,9 @@
 import { HugeiconsIcon, type IconSvgElement } from "@/components/icons/icon";
 import {
   Add01Icon,
-  ArrowLeft02Icon,
+  ArrowLeft01Icon,
   ArrowReloadHorizontalIcon,
-  ArrowRight02Icon,
+  ArrowRight01Icon,
   Copy01Icon,
   Download03Icon,
   Share03Icon,
@@ -78,10 +78,10 @@ export function BrowserChrome({ url, variant = "full" }: {
       <span className="ml-2 hidden items-center gap-3 sm:flex">
         <Glyph icon={SidebarLeft01Icon} size={16} />
         <span className="flex items-center gap-2.5">
-          <Glyph icon={ArrowLeft02Icon} />
+          <Glyph icon={ArrowLeft01Icon} />
           <HugeiconsIcon
             className="shrink-0 text-muted-foreground"
-            icon={ArrowRight02Icon}
+            icon={ArrowRight01Icon}
             size={15}
             strokeWidth={1.75}
           />

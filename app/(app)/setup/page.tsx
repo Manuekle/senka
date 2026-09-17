@@ -235,7 +235,7 @@ export default function SetupPage() {
               type="button"
               onClick={() => void load()}
               disabled={refreshing}
-              className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium shadow-[var(--shadow-inset)] transition-all duration-150 hover:border-input hover:bg-accent disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium shadow-[var(--shadow-inset)] transition duration-150 hover:border-input hover:bg-accent disabled:opacity-60"
             >
               <HugeiconsIcon
                 icon={refreshing ? Loading03Icon : RefreshIcon}

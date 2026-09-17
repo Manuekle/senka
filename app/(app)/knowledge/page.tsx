@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { HugeiconsIcon } from "@/components/icons/icon";
 import {
   LibraryIcon,
@@ -9,7 +10,7 @@ import {
   AlertCircleIcon,
   SearchIcon,
   AiWiperIcon,
-  ArrowLeft02Icon,
+  ArrowLeft01Icon,
   Delete02Icon,
   Image01Icon,
   MoreHorizontalIcon,
@@ -613,7 +614,7 @@ export default function KnowledgePage() {
                         onClick={() => setFolderId(null)}
                         className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
                       >
-                        <HugeiconsIcon icon={ArrowLeft02Icon} size={14} strokeWidth={2} />
+                        <HugeiconsIcon icon={ArrowLeft01Icon} size={14} strokeWidth={2} />
                         {t("knowledge.folderBack")}
                       </button>
                       <img
@@ -923,13 +924,14 @@ export default function KnowledgePage() {
                             title={match.description || match.name}
                             className="overflow-hidden rounded-lg border border-border"
                           >
-                            <div className="aspect-square bg-muted">
+                            <div className="relative aspect-square bg-muted">
                               {match.kind === "image" ? (
-                                <img
+                                <Image
                                   src={`/api/media/${match.id}/file`}
                                   alt={match.description || match.name}
-                                  loading="lazy"
-                                  className="size-full object-cover"
+                                  fill
+                                  sizes="(max-width: 640px) 30vw, 96px"
+                                  className="object-cover"
                                 />
                               ) : (
                                 <span className="flex size-full items-center justify-center text-muted-foreground">

@@ -11,7 +11,7 @@ import {
 import { HugeiconsIcon } from "@/components/icons/icon";
 import {
   AiSearch01Icon,
-  ArrowUp02Icon,
+  ArrowUp01Icon,
   BulbIcon,
   CodeIcon,
   GlobalSearchIcon,
@@ -22,6 +22,7 @@ import {
   ToolCaseIcon,
   XIcon,
 } from "@hugeicons/core-free-icons";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/provider";
 import { ChatDropdown } from "./chat-dropdown";
@@ -103,6 +104,7 @@ export function ChatInput({
 }) {
   const t = useT();
   const TOOLS_MENU = buildToolsMenu(t);
+  const reducedMotion = useReducedMotion();
   const [text, setText] = useState(initialText ?? "");
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
@@ -156,11 +158,14 @@ export function ChatInput({
   };
 
   const handleRemoveAttachment = (id: string) => {
-    setPendingAttachments((prev) => {
-      const found = prev.find((item) => item.id === id);
-      if (found?.previewUrl) URL.revokeObjectURL(found.previewUrl);
-      return prev.filter((item) => item.id !== id);
-    });
+    const found = pendingAttachments.find((item) => item.id === id);
+    setPendingAttachments((prev) => prev.filter((item) => item.id !== id));
+    if (found?.previewUrl) {
+      // Revoke after the chip's exit animation (~150ms) so the preview
+      // doesn't blank out mid-fade.
+      const previewUrl = found.previewUrl;
+      window.setTimeout(() => URL.revokeObjectURL(previewUrl), 250);
+    }
   };
 
   const handlePaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
@@ -260,13 +265,11 @@ export function ChatInput({
   };
 
   const handleSelectTool = (tool: (typeof TOOLS_MENU)[number]) => {
+    // The tool shows up as a non-editable inline label above the textarea —
+    // no prompt text is inserted into the message anymore, so nothing is
+    // left behind when the tool is removed.
     setActiveToolMode(tool.id);
     setToolsMenuOpen(false);
-    if (!text.trim()) {
-      setText(tool.promptPrefix);
-    } else if (!text.startsWith(tool.promptPrefix)) {
-      setText(`${tool.promptPrefix}${text}`);
-    }
     textareaRef.current?.focus();
   };
 
@@ -305,16 +308,22 @@ export function ChatInput({
   const activeToolLabel = TOOLS_MENU.find((tool) => tool.id === activeToolMode)?.label ?? "Tools";
 
   return (
+    // Double border, same treatment as the agent cards on /agents: a muted
+    // outer frame (`rounded-[20px] border-border/70 p-1.5`) holding the actual
+    // composer panel (`rounded-[14px] border-border/50 bg-card`) with a 6px
+    // muted gap between the two lines.
     <div
       ref={containerRef}
-      className="relative w-full rounded-2xl border border-border/40 bg-card p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_4px_12px_rgba(0,0,0,0.03)]"
+      className="relative w-full rounded-[20px] border border-border/70 bg-muted/50 p-1.5 shadow-[var(--shadow-float)] transition-colors focus-within:border-input"
     >
-      {/* File & Image Previews */}
+      {/* Attachment chips live in the outer frame's gap — inside the first
+          border, outside the inner composer panel. Renders null when empty. */}
       <ChatAttachmentsPreview
         attachments={pendingAttachments}
         onRemove={handleRemoveAttachment}
       />
 
+      <div className="rounded-[14px] border border-border/50 bg-card p-4 shadow-xs">
       {/* Hidden File Picker */}
       <input
         type="file"
@@ -324,6 +333,67 @@ export function ChatInput({
         className="hidden"
         accept="image/*,.pdf,.txt,.md,.json,.csv,.doc,.docx"
       />
+
+      {/* Active tool / agent as an inline, non-editable label — blue text
+          with its icon beside it, sitting in the input flow above the
+          textarea. It is a separate element (not part of the textarea
+          value), so it can't be selected or edited with the message text,
+          and it animates in and out instead of appearing abruptly. */}
+      <AnimatePresence>
+        {activeMentionAgent || activeToolMode ? (
+          <motion.div
+            initial={
+              reducedMotion
+                ? { opacity: 0 }
+                : { opacity: 0, y: -4, scale: 0.96, filter: "blur(4px)" }
+            }
+            animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+            exit={
+              reducedMotion
+                ? { opacity: 0 }
+                : {
+                    opacity: 0,
+                    y: -4,
+                    scale: 0.96,
+                    filter: "blur(4px)",
+                    transition: { duration: 0.15, ease: [0.4, 0, 1, 1] },
+                  }
+            }
+            transition={{ duration: reducedMotion ? 0 : 0.2, ease: [0.23, 1, 0.32, 1] }}
+            className="flex w-full items-center gap-1.5 px-1 pb-1.5 select-none"
+          >
+            <HugeiconsIcon
+              icon={
+                activeMentionAgent
+                  ? CallSpark02Icon
+                  : TOOLS_MENU.find((tool) => tool.id === activeToolMode)?.icon ?? ToolCaseIcon
+              }
+              size={14}
+              strokeWidth={2}
+              className="text-primary shrink-0"
+            />
+            <span className="text-primary max-w-44 truncate text-[13px] font-medium">
+              {activeMentionAgent ? `@${activeMentionAgent.name}` : activeToolLabel}
+            </span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveMentionAgent(null);
+                    setActiveToolMode(null);
+                  }}
+                  className="text-primary/50 rounded-md p-0.5 transition-colors hover:bg-primary/10 hover:text-primary"
+                  aria-label={t("chat.removeMode")}
+                >
+                  <HugeiconsIcon icon={XIcon} size={11} strokeWidth={2.5} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">{t("chat.removeMode")}</TooltipContent>
+            </Tooltip>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
       {/* Textarea */}
       <textarea
@@ -360,7 +430,7 @@ export function ChatInput({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="flex size-8 shrink-0 items-center justify-center rounded-xl border border-border/60 text-muted-foreground transition-colors hover:border-input hover:text-foreground"
+                className="flex size-9 shrink-0 items-center justify-center rounded-2xl border border-border/60 text-muted-foreground transition-colors hover:border-input hover:text-foreground"
                 aria-label={t("chat.attachFile")}
               >
                 <HugeiconsIcon icon={PaperclipIcon} size={16} strokeWidth={2} />
@@ -380,7 +450,7 @@ export function ChatInput({
                     setToolsMenuOpen((prev) => !prev);
                   }}
                   className={cn(
-                    "relative z-40 flex size-8 shrink-0 items-center justify-center rounded-xl border text-muted-foreground transition-colors hover:border-input hover:text-foreground",
+                    "relative z-40 flex size-9 shrink-0 items-center justify-center rounded-2xl border text-muted-foreground transition-colors hover:border-input hover:text-foreground",
                     toolsMenuOpen ? "border-border bg-accent/50" : "border-border/60",
                   )}
                   aria-label={t("chat.tools")}
@@ -444,41 +514,6 @@ export function ChatInput({
             </ChatDropdown>
           </div>
 
-          {/* Active agent / tool label with centered XIcon */}
-          {(activeMentionAgent || activeToolMode) && (
-            <div className="inline-flex items-center gap-1.5 rounded-lg border border-border/50 bg-muted/40 px-2.5 py-1 text-xs text-foreground select-none">
-              <HugeiconsIcon
-                icon={
-                  activeMentionAgent
-                    ? CallSpark02Icon
-                    : TOOLS_MENU.find((tool) => tool.id === activeToolMode)?.icon ?? ToolCaseIcon
-                }
-                size={14}
-                strokeWidth={2}
-                className={activeMentionAgent ? "text-primary shrink-0" : "text-muted-foreground shrink-0"}
-              />
-              <span className="font-medium text-[12px] truncate max-w-44">
-                {activeMentionAgent ? `@${activeMentionAgent.name}` : activeToolLabel}
-              </span>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveMentionAgent(null);
-                      setActiveToolMode(null);
-                    }}
-                    className="flex size-4 items-center justify-center rounded-sm text-muted-foreground/60 transition-colors hover:bg-background hover:text-foreground"
-                    aria-label={t("chat.removeMode")}
-                  >
-                    <HugeiconsIcon icon={XIcon} size={11} strokeWidth={2.5} />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="top">{t("chat.removeMode")}</TooltipContent>
-              </Tooltip>
-            </div>
-          )}
-
           {/* Spacer */}
           <div className="flex-1" />
 
@@ -496,7 +531,7 @@ export function ChatInput({
                 <button
                   type="button"
                   onClick={() => void onStop()}
-                  className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-destructive text-destructive-foreground transition-opacity"
+                  className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-destructive text-destructive-foreground transition-opacity"
                   aria-label={t("chat.stopResponse")}
                 >
                   <HugeiconsIcon icon={StopIcon} size={14} strokeWidth={2} />
@@ -511,10 +546,10 @@ export function ChatInput({
                   type="button"
                   onClick={() => void handleSend()}
                   disabled={text.trim().length < MIN_CHARS && pendingAttachments.length === 0}
-                  className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-foreground text-background disabled:opacity-20 transition-opacity"
+                  className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-foreground text-background disabled:opacity-20 transition-opacity"
                   aria-label={t("chat.send")}
                 >
-                  <HugeiconsIcon icon={ArrowUp02Icon} size={15} strokeWidth={2.5} />
+                  <HugeiconsIcon icon={ArrowUp01Icon} size={15} strokeWidth={2.5} />
                 </button>
               </TooltipTrigger>
               <TooltipContent side="top">{t("chat.send")}</TooltipContent>
@@ -522,6 +557,7 @@ export function ChatInput({
           )}
         </div>
       </TooltipProvider>
+      </div>
     </div>
   );
 }

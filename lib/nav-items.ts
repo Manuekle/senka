@@ -1,5 +1,6 @@
 import type { IconSvgElement } from "@hugeicons/react";
 import {
+  Activity01Icon,
   DashboardSquare01Icon,
   DocumentAttachmentIcon,
   ZapIcon,
@@ -76,6 +77,9 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       { href: "/automations", labelKey: "nav.automations", icon: ZapIcon },
       { href: "/calendar", labelKey: "nav.calendar", icon: Calendar03Icon },
       { href: "/agents", labelKey: "nav.agents", icon: AiImagineIcon },
+      // The spectator view, next to the agents on purpose: the only thing this
+      // page answers is what the team is saying right now.
+      { href: "/working", labelKey: "nav.working", icon: Activity01Icon },
       // Next to the agents on purpose: the only question this page answers is
       // which agent holds which line.
       { href: "/numbers", labelKey: "nav.numbers", icon: SmartPhone01Icon },

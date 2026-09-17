@@ -6,6 +6,7 @@ import proof from "@/content/proof.json";
 import { useT } from "@/lib/i18n/provider";
 import type { GlobeClient } from "./client-globe";
 import { ClientGlobe } from "./deferred-globe";
+import Image from "next/image";
 import { DitherTerrain, type RidgePoint } from "./dither-terrain";
 import { useStageLive } from "./use-stage-live";
 import { FigureLabel, Haze, Reveal, Shell } from "./primitives";
@@ -139,15 +140,14 @@ const GROUND_MOBILE: readonly RidgePoint[] = [
 /** The headshot, or the initials plate the app uses for a contact without one. */
 function Avatar({ name, src }: { readonly name: string; readonly src?: string }) {
   if (src) {
+    // Fixed 40px box: the mark inside is hand-edited content, so the optimizer
+    // only rescales it. width/height pin the box; sizes keeps the srcset honest.
     return (
-      // Not `next/image`: the path comes out of a hand-edited JSON file, so its
-      // real dimensions are unknown here, and a fixed 40px square has nothing
-      // to gain from the optimiser that it does not already have.
-      // biome-ignore lint/performance/noImgElement: fixed-size avatar from hand-edited content
-      <img
+      <Image
         alt=""
         className="size-10 shrink-0 rounded-xl object-cover"
         height={40}
+        sizes="40px"
         src={src}
         width={40}
       />

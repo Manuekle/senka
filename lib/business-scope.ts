@@ -39,6 +39,11 @@ export type BusinessEntry = {
   readonly createdAt: string;
   readonly purchaseId?: string;
   readonly access?: "active" | "suspended";
+  /** The account that created (or bought) this workspace. The browser cookie
+   *  picks among the workspaces its session owns; entries without one — the
+   *  pre-existing business, rows from before this field — stay reachable to
+   *  every session, as they always were. */
+  readonly ownerEmail?: string;
 };
 
 type Registry = {
@@ -120,7 +125,20 @@ export async function createBusiness(name: string): Promise<BusinessEntry> {
     id: `b-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
     name: name.trim(),
     createdAt: new Date().toISOString(),
-  };
+  } as BusinessEntry;
+  // The workspace belongs to the account that created it — that email is
+  // what lets lib/workspace-request.ts tell "my workspace" from "a cookie
+  // naming somebody else's". Absent when there is no session to ask (tests,
+  // internal callers), which leaves the entry reachable to everyone, exactly
+  // as entries that predate this field.
+  try {
+    const { cookies } = await import("next/headers");
+    const { SESSION_COOKIE, getSessionAccountEmail } = await import("./auth/store");
+    const email = await getSessionAccountEmail((await cookies()).get(SESSION_COOKIE)?.value);
+    if (email) (entry as { ownerEmail?: string }).ownerEmail = email;
+  } catch {
+    // No request context — the entry simply carries no owner.
+  }
   await registryStore.update((registry) => {
     registry.businesses = [...registry.businesses, entry];
     // Creating a business and then having to go and switch to it is one step

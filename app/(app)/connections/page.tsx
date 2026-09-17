@@ -7,7 +7,7 @@ import {
   AuthorizedIcon,
   CheckmarkCircle02Icon,
   AlertCircleIcon,
-  ArrowRight02Icon,
+  ArrowRight01Icon,
   ExternalLinkIcon,
   Unlink01Icon,
 } from "@hugeicons/core-free-icons";
@@ -339,7 +339,7 @@ export default function ConnectionsPage() {
                               {integration.configured
                                 ? t("connections.review")
                                 : t("connections.addKey")}
-                              <HugeiconsIcon icon={ArrowRight02Icon} size={14} strokeWidth={1.75} />
+                              <HugeiconsIcon icon={ArrowRight01Icon} size={14} strokeWidth={1.75} />
                             </button>
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs text-pretty">

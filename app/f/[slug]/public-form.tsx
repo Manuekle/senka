@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { HugeiconsIcon } from "@/components/icons/icon";
-import { ArrowLeft02Icon, ArrowRight02Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -256,7 +256,7 @@ export function PublicForm({
                         aria-pressed={selected}
                         onClick={() => toggleChoice(field.id, choice.id, multi)}
                         className={cn(
-                          "flex items-center gap-2 rounded-xl border p-3 text-left text-sm transition-all duration-150",
+                          "flex items-center gap-2 rounded-xl border p-3 text-left text-sm transition duration-150",
                           "hover:border-foreground/25 hover:bg-accent active:scale-[0.99]",
                           selected
                             ? "border-foreground/40 bg-accent shadow-[var(--shadow-inset)]"
@@ -375,13 +375,13 @@ export function PublicForm({
           disabled={index === 0 || sending}
           onClick={() => setIndex((current) => Math.max(0, current - 1))}
         >
-          <HugeiconsIcon icon={ArrowLeft02Icon} size={16} strokeWidth={1.75} />
+          <HugeiconsIcon icon={ArrowLeft01Icon} size={16} strokeWidth={1.75} />
           {t("publicForm.back")}
         </Button>
         <Button onClick={() => void advance()} disabled={sending}>
           {sending ? t("publicForm.sending") : isLast ? t("publicForm.submit") : t("publicForm.next")}
           {!sending && !isLast ? (
-            <HugeiconsIcon icon={ArrowRight02Icon} size={16} strokeWidth={1.75} />
+            <HugeiconsIcon icon={ArrowRight01Icon} size={16} strokeWidth={1.75} />
           ) : null}
         </Button>
       </div>

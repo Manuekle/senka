@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { HugeiconsIcon } from "@/components/icons/icon";
-import { RotateCwIcon, ArrowLeft02Icon } from "@hugeicons/core-free-icons";
+import { RotateCwIcon, ArrowLeft01Icon } from "@hugeicons/core-free-icons";
 import { useT } from "@/lib/i18n/provider";
 
 export default function Error({
@@ -45,16 +45,16 @@ export default function Error({
       <div className="flex items-center gap-2">
         <button
           onClick={reset}
-          className="inline-flex h-9 items-center gap-2 rounded-lg bg-foreground px-4 text-sm font-medium text-background shadow-[var(--shadow-soft)] transition-all duration-150 hover:opacity-90 active:translate-y-px"
+          className="inline-flex h-9 items-center gap-2 rounded-lg bg-foreground px-4 text-sm font-medium text-background shadow-[var(--shadow-soft)] transition duration-150 hover:opacity-90 active:translate-y-px"
         >
           <HugeiconsIcon icon={RotateCwIcon} size={16} strokeWidth={1.75} />
           {t("error.reload")}
         </button>
         <button
           onClick={handleBack}
-          className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-4 text-sm font-medium text-foreground shadow-[var(--shadow-inset)] transition-all duration-150 hover:border-input hover:bg-accent active:translate-y-px"
+          className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-4 text-sm font-medium text-foreground shadow-[var(--shadow-inset)] transition duration-150 hover:border-input hover:bg-accent active:translate-y-px"
         >
-          <HugeiconsIcon icon={ArrowLeft02Icon} size={16} strokeWidth={1.75} />
+          <HugeiconsIcon icon={ArrowLeft01Icon} size={16} strokeWidth={1.75} />
           {t("error.back")}
         </button>
       </div>

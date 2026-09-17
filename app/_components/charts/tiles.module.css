@@ -47,8 +47,8 @@
 .columnButton { flex: 1; min-width: 0; padding: 5px 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--tile-muted); cursor: pointer; border-radius: 4px; }
 .columnButton[data-active="true"] { color: var(--tile-ink); font-weight: 600; }
 @media (prefers-reduced-motion: no-preference) {
-  .reveal { animation: field-reveal .5s cubic-bezier(.19,1,.22,1) both; }
-  .legend button, .rankButton, .stackLegend button { transition: opacity .26s cubic-bezier(.22,1,.36,1), background-color .18s cubic-bezier(.22,1,.36,1), color .18s cubic-bezier(.22,1,.36,1); }
+  .reveal { animation: field-reveal .5s var(--ease-expo-out) both; }
+  .legend button, .rankButton, .stackLegend button { transition: opacity .26s var(--ease-smooth-out), background-color .18s var(--ease-smooth-out), color .18s var(--ease-smooth-out); }
   .legendLabel, .columnButton { transition: color .18s, font-weight .18s; }
 }
 @keyframes field-reveal { from { clip-path: inset(0 100% 0 0); filter: blur(9px); opacity: 0; } to { clip-path: inset(0 0 0 0); filter: blur(0); opacity: 1; } }

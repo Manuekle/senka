@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { CREDENTIAL_GROUPS, getStoredCredentials } from "@/lib/credentials";
 import { withApiErrors } from "@/lib/api-error";
+import { requireOwner } from "@/lib/owner-gate";
 
 // GET /api/settings/export?format=env|json — download everything saved in
 // Settings as a file the user can keep or move to another machine.
@@ -8,8 +9,15 @@ import { withApiErrors } from "@/lib/api-error";
 // The file contains real secrets in plain text: that is the point of a backup,
 // and GET /api/settings already returns the same values to the same caller, so
 // this adds no exposure the app didn't have. The UI says so before the click.
+// Which is also why a session alone is no longer enough to ask for one: on a
+// multi-account install a session can belong to an account that is not the
+// owner's, and this stays owner-only. The owner's own export keeps working
+// exactly as before.
 
 export const GET = withApiErrors(async function GET(request: NextRequest) {
+  const denied = await requireOwner(request);
+  if (denied) return denied;
+
   const format = new URL(request.url).searchParams.get("format") === "json" ? "json" : "env";
   const stored = await getStoredCredentials();
   const stamp = new Date().toISOString().slice(0, 10);

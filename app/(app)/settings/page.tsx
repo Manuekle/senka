@@ -25,7 +25,7 @@ import {
   SquareLock02Icon,
   Coins01Icon,
   Blockchain05Icon,
-  ArrowRight02Icon,
+  ArrowRight01Icon,
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Skeleton, SettingsSkeleton } from "@/components/ai-elements/skeleton";
@@ -849,7 +849,7 @@ export default function SettingsPage() {
         {mounted ? createPortal(
           <div
             className={cn(
-              "fixed bottom-6 left-1/2 z-50 -translate-x-1/2 transition-all duration-200 ease-out motion-reduce:transition-none",
+              "fixed bottom-6 left-1/2 z-50 -translate-x-1/2 transition duration-200 ease-out motion-reduce:transition-none",
               showSaveBar ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-4 opacity-0",
             )}
             aria-hidden={!showSaveBar}
@@ -926,7 +926,7 @@ function AiUsageTeaser() {
               <CardDescription>{t("aiUsage.subtitle")}</CardDescription>
             </div>
             <HugeiconsIcon
-              icon={ArrowRight02Icon}
+              icon={ArrowRight01Icon}
               size={16}
               strokeWidth={1.75}
               className="shrink-0 text-muted-foreground"

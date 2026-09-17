@@ -121,7 +121,7 @@ function AgentMessagePart({
       if (isImage && part.url) {
         return (
           <div className="space-y-1.5 my-1">
-            <div className="group relative overflow-hidden rounded-xl border border-border/80 bg-muted/40 max-w-sm shadow-sm transition-all hover:shadow-md">
+            <div className="group relative overflow-hidden rounded-xl border border-border/80 bg-muted/40 max-w-sm shadow-sm transition hover:shadow-md">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={part.url}
@@ -149,7 +149,7 @@ function AgentMessagePart({
       }
 
       return (
-        <div className="flex items-center gap-2.5 rounded-xl border border-border bg-card/60 px-3.5 py-2.5 text-sm shadow-[var(--shadow-soft)] transition-all hover:border-input max-w-sm my-1">
+        <div className="flex items-center gap-2.5 rounded-xl border border-border bg-card/60 px-3.5 py-2.5 text-sm shadow-[var(--shadow-soft)] transition hover:border-input max-w-sm my-1">
           <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
             <HugeiconsIcon icon={File01Icon} size={16} strokeWidth={1.75} />
           </div>

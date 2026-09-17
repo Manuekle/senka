@@ -286,13 +286,13 @@ export const ConversationBar = React.forwardRef<
                     >
                       <Keyboard
                         className={
-                          "h-[18px] w-[18px] transform-gpu transition-all duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] " +
+                          "h-[18px] w-[18px] transform-gpu transition duration-200 ease-smooth-out " +
                           (keyboardOpen ? "scale-75 opacity-0" : "scale-100 opacity-100")
                         }
                       />
                       <ChevronDown
                         className={
-                          "absolute inset-0 m-auto h-[18px] w-[18px] transform-gpu transition-all delay-50 duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] " +
+                          "absolute inset-0 m-auto h-[18px] w-[18px] transform-gpu transition delay-50 duration-200 ease-bounce-strong " +
                           (keyboardOpen ? "scale-100 opacity-100" : "scale-75 opacity-0")
                         }
                       />
@@ -333,7 +333,7 @@ export const ConversationBar = React.forwardRef<
 
           <div
             className={cn(
-              "overflow-hidden transition-all duration-300 ease-out",
+              "overflow-hidden transition-[max-height] duration-300 ease-out",
               keyboardOpen ? "max-h-[120px]" : "max-h-0"
             )}
           >

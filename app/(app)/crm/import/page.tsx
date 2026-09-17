@@ -7,7 +7,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { HugeiconsIcon } from "@/components/icons/icon";
 import {
   ArrowLeft01Icon,
-  ArrowRight02Icon,
+  ArrowRight01Icon,
   Cancel01Icon,
   CheckmarkCircle02Icon,
   FileDownloadIcon,
@@ -371,7 +371,7 @@ export default function ContactImportPage() {
                           </p>
                         </div>
                         <HugeiconsIcon
-                          icon={ArrowRight02Icon}
+                          icon={ArrowRight01Icon}
                           size={16}
                           strokeWidth={1.75}
                           className={cn("hidden text-muted-foreground transition-opacity duration-200 sm:block", ignored && "opacity-40")}

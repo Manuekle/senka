@@ -35,7 +35,7 @@ export function SoundToggle({
           aria-label={t(labelKey)}
           className={cn(
             "flex items-center gap-2 rounded-md px-2.5 py-1.5 text-xs font-medium text-muted-foreground",
-            "transition-all duration-150 hover:bg-accent hover:text-foreground",
+            "transition duration-150 hover:bg-accent hover:text-foreground",
             !showLabel && "px-1.5 py-1",
             className,
           )}

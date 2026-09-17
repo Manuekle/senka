@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { HugeiconsIcon } from "@/components/icons/icon";
 import {
-  ArrowLeft02Icon,
+  ArrowLeft01Icon,
   CrownIcon,
   Invoice04Icon,
   StripeIcon,
@@ -92,10 +92,10 @@ export default function BillingPage() {
             className="group mb-3 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
           >
             <HugeiconsIcon
-              icon={ArrowLeft02Icon}
+              icon={ArrowLeft01Icon}
               size={14}
               strokeWidth={1.75}
-              className="transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-x-0.5"
+              className="transition-transform duration-200 ease-expo-out group-hover:-translate-x-0.5"
             />
             {t("billing.back")}
           </Link>

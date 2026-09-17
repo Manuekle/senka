@@ -3,7 +3,7 @@
 import { AuthBackdrop } from "@/app/_components/auth-backdrop";
 import { HugeiconsIcon, type IconSvgElement } from "@/components/icons/icon";
 import {
-  ArrowRight02Icon,
+  ArrowRight01Icon,
   CheckmarkCircle02Icon,
   Coins01Icon,
   LibraryIcon,
@@ -306,7 +306,7 @@ export default function OnboardingPage() {
               type="button"
             >
               {step === STEPS ? t("onboarding.finish") : t("onboarding.next")}
-              <HugeiconsIcon icon={ArrowRight02Icon} size={15} strokeWidth={2} />
+              <HugeiconsIcon icon={ArrowRight01Icon} size={15} strokeWidth={2} />
             </Button>
           </div>
         </div>
@@ -411,7 +411,7 @@ function Choice({
     <button
       aria-pressed={selected}
       className={cn(
-        "flex items-center justify-center gap-2 rounded-xl border px-3.5 py-2 font-medium text-sm transition-all duration-150",
+        "flex items-center justify-center gap-2 rounded-xl border px-3.5 py-2 font-medium text-sm transition duration-150",
         selected
           ? "border-input bg-muted text-foreground shadow-[var(--shadow-inset)]"
           : "border-border bg-card text-muted-foreground hover:border-input hover:text-foreground",

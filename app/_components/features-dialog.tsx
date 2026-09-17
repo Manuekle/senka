@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon, type IconSvgElement } from "@/components/icons/icon";
 import {
-  ArrowRight02Icon,
+  ArrowRight01Icon,
   Coins01Icon,
   InboxIcon,
   LibraryIcon,
@@ -82,7 +82,7 @@ export function FeaturesDialog({
             return (
               <Link
                 className={cn(
-                  "group flex items-center gap-3 rounded-xl border px-4 py-3 transition-all duration-150",
+                  "group flex items-center gap-3 rounded-xl border px-4 py-3 transition duration-150",
                   chosen
                     ? "border-input bg-muted/60 shadow-[var(--shadow-inset)]"
                     : "border-border bg-card hover:border-input",
@@ -109,7 +109,7 @@ export function FeaturesDialog({
                 </span>
                 <HugeiconsIcon
                   className="shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5"
-                  icon={ArrowRight02Icon}
+                  icon={ArrowRight01Icon}
                   size={15}
                   strokeWidth={2}
                 />

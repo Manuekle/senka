@@ -4,7 +4,7 @@ import { HugeiconsIcon } from "@/components/icons/icon";
 import {
   Add01Icon,
   ArrowDown01Icon,
-  ArrowUp02Icon,
+  ArrowUp01Icon,
   FaceMimicIcon,
   Cancel01Icon,
   PaperclipIcon,
@@ -16,6 +16,7 @@ import {
 import { type ReactNode, type Ref, useEffect, useRef } from "react";
 import { ToolResult } from "@/components/agents/tool-result";
 import { StreamingResponse } from "@/components/agents/streaming-response";
+import { AppIcon } from "@/components/app-icon";
 import { Message, MessageContent } from "@/components/ai-elements/message";
 
 import { SlidingTabs } from "@/components/ai-elements/sliding-tabs";
@@ -24,6 +25,7 @@ import { Beam } from "@/components/ui/beam";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { SuggestionChip } from "@/components/ui/suggestion-chip";
+import { dailyGreeting } from "@/lib/chat-greeting";
 import { useT } from "@/lib/i18n/provider";
 import { cn } from "@/lib/utils";
 import {
@@ -379,9 +381,17 @@ export function ChatScreen() {
               </>
             ) : (
               <div className="flex flex-col items-center gap-6 text-center">
-                <h1 className="text-4xl font-semibold sm:text-5xl">
-                  <span className="text-foreground">senka</span>
-                </h1>
+                {/* The empty chat opens with the agent's mark beside the daily
+                    greeting — a short question that rotates once a day, in the
+                    display face, exactly as `agent-chat.tsx` renders it. The
+                    wordmark it replaced said the product's name; this one
+                    speaks to the person reading. */}
+                <div className="flex items-center justify-center gap-3">
+                  <AppIcon className="shrink-0 text-foreground" size={32} />
+                  <h1 className="font-cooper text-3xl font-semibold text-foreground sm:text-4xl">
+                    {dailyGreeting()}
+                  </h1>
+                </div>
                 <p className="max-w-sm text-balance text-sm leading-relaxed text-muted-foreground">
                   {t("chat.tagline")}
                 </p>
@@ -475,13 +485,16 @@ export function ChatScreen() {
  * `/api/chat/agents` on mount to populate the `@` menu, which is a request the
  * marketing page has no business making.
  *
- * So the markup is copied and the behaviour is not: same card (`rounded-2xl`,
- * `border-border/40`, the two-layer shadow), same bare textarea over a bottom
- * bar, same attach and tools buttons, and the same send control — a solid
- * `size-8 rounded-xl` square that turns into the destructive stop button while
- * a turn is in flight, which is the swap the loop is built around. It replaced
- * `PromptInput`, the pill with the round submit floating inside it, which the
- * chat stopped using and only `/agents/[id]/chat` still does.
+ * So the markup is copied and the behaviour is not: same double frame — a muted
+ * outer one (`rounded-[20px] border-border/70 bg-muted/50 p-1.5` — the
+ * attachment chips live in its gap —) holding the actual composer panel
+ * (`rounded-[14px] border-border/50 bg-card p-4 shadow-xs`), same bare
+ * textarea over a bottom bar, same attach and tools buttons, and the same send
+ * control — a solid `size-9 rounded-2xl` square that turns into the
+ * destructive stop button while a turn is in flight, which is the swap the
+ * loop is built around. It replaced `PromptInput`, the pill with the round
+ * submit floating inside it, which the chat stopped using and only
+ * `/agents/[id]/chat` still does.
  */
 function MockComposer({
   busy,
@@ -499,25 +512,26 @@ function MockComposer({
   const t = useT();
 
   return (
-    <div className="relative w-full rounded-2xl border border-border/40 bg-card p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_4px_12px_rgba(0,0,0,0.03)]">
-      {/* Uncontrolled on purpose — see the note above. */}
-      <textarea
-        className="max-h-56 w-full resize-none bg-transparent px-1 py-1 text-foreground text-sm leading-relaxed placeholder:text-muted-foreground/50 focus:outline-none"
-        placeholder={t("chat.sendPlaceholder")}
-        readOnly
-        ref={draft}
-        rows={1}
-      />
+    <div className="relative w-full rounded-[20px] border border-border/70 bg-muted/50 p-1.5 shadow-[var(--shadow-float)]">
+      <div className="rounded-[14px] border border-border/50 bg-card p-4 shadow-xs">
+        {/* Uncontrolled on purpose — see the note above. */}
+        <textarea
+          className="max-h-56 w-full resize-none bg-transparent px-1 py-1 text-foreground text-sm leading-relaxed placeholder:text-muted-foreground/50 focus:outline-none"
+          placeholder={t("chat.sendPlaceholder")}
+          readOnly
+          ref={draft}
+          rows={1}
+        />
 
-      <div className="relative flex items-center gap-2 px-0.5 pt-4">
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-xl border border-border/60 text-muted-foreground">
-          <HugeiconsIcon icon={PaperclipIcon} size={16} strokeWidth={2} />
-        </span>
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-xl border border-border/60 text-muted-foreground">
-          <HugeiconsIcon icon={ToolCaseIcon} size={16} strokeWidth={2} />
-        </span>
+        <div className="relative flex items-center gap-2 px-0.5 pt-4">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-2xl border border-border/60 text-muted-foreground">
+            <HugeiconsIcon icon={PaperclipIcon} size={16} strokeWidth={2} />
+          </span>
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-2xl border border-border/60 text-muted-foreground">
+            <HugeiconsIcon icon={ToolCaseIcon} size={16} strokeWidth={2} />
+          </span>
 
-        <div className="flex-1" />
+          <div className="flex-1" />
 
         {/* The ref is on the button itself. It was on a wrapping `<span>`
             once, and a span around an absolutely placed button measures 0×0 —
@@ -526,7 +540,7 @@ function MockComposer({
         <button
           aria-label={busy ? t("chat.stop") : t("chat.send")}
           className={cn(
-            "flex size-8 shrink-0 items-center justify-center rounded-xl transition-opacity",
+            "flex size-9 shrink-0 items-center justify-center rounded-2xl transition-opacity",
             busy
               ? "bg-destructive text-destructive-foreground"
               : cn("bg-foreground text-background", !hasDraft && "opacity-20"),
@@ -535,11 +549,12 @@ function MockComposer({
           type="button"
         >
           <HugeiconsIcon
-            icon={busy ? StopIcon : ArrowUp02Icon}
+            icon={busy ? StopIcon : ArrowUp01Icon}
             size={busy ? 14 : 15}
             strokeWidth={busy ? 2 : 2.5}
           />
         </button>
+        </div>
       </div>
     </div>
   );

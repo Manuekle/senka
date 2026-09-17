@@ -3,7 +3,7 @@
 import { AuthBackdrop } from "@/app/_components/auth-backdrop";
 import { HugeiconsIcon } from "@/components/icons/icon";
 import { SenkaMark } from "@/components/icons/senka-mark";
-import { ArrowLeft02Icon, EyeIcon, EyeOffIcon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, EyeIcon, EyeOffIcon } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState, type FormEvent } from "react";
@@ -462,8 +462,8 @@ function LoginForm() {
             href="/"
           >
             <HugeiconsIcon
-              className="transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-x-0.5"
-              icon={ArrowLeft02Icon}
+              className="transition-transform duration-200 ease-expo-out group-hover:-translate-x-0.5"
+              icon={ArrowLeft01Icon}
               size={14}
               strokeWidth={2}
             />

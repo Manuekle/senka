@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { useConfirmDialog } from "@/components/confirm-dialog";
+import Image from "next/image";
 import { fetchJson, type UiError } from "@/lib/api-error-message";
 import { useT } from "@/lib/i18n/provider";
 import { cn } from "@/lib/utils";
@@ -142,10 +143,11 @@ export function BusinessesCard() {
                 )}
               >
                 {business.logoUpdatedAt ? (
-                  /* eslint-disable-next-line @next/next/no-img-element -- served by API route */
-                  <img
+                  <Image
                     src={`/api/businesses/${encodeURIComponent(business.id)}/logo?v=${encodeURIComponent(business.logoUpdatedAt)}`}
                     alt={business.name || t("business.unnamed")}
+                    width={80}
+                    height={80}
                     className="size-10 shrink-0 rounded-lg border border-border bg-card object-contain p-0.5"
                   />
                 ) : (

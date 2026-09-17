@@ -2,7 +2,7 @@
 
 import { type FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import { HugeiconsIcon } from "@/components/icons/icon";
-import { ArrowLeft02Icon, ArrowRight02Icon, Calendar03Icon, Coins01Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, ArrowRight01Icon, Calendar03Icon, Coins01Icon } from "@hugeicons/core-free-icons";
 import {
   Drawer,
   DrawerBody,
@@ -318,7 +318,7 @@ export function DealDialog({
                           onClick={() => setViewDate((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))}
                           className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         >
-                          <HugeiconsIcon icon={ArrowLeft02Icon} size={16} strokeWidth={1.75} />
+                          <HugeiconsIcon icon={ArrowLeft01Icon} size={16} strokeWidth={1.75} />
                         </button>
                         <span className="text-sm font-semibold capitalize">
                           {viewDate.toLocaleDateString(locale, { month: "long", year: "numeric" })}
@@ -329,7 +329,7 @@ export function DealDialog({
                           onClick={() => setViewDate((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))}
                           className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         >
-                          <HugeiconsIcon icon={ArrowRight02Icon} size={16} strokeWidth={1.75} />
+                          <HugeiconsIcon icon={ArrowRight01Icon} size={16} strokeWidth={1.75} />
                         </button>
                       </div>
                       <div className="mt-3 grid grid-cols-7 gap-1 text-center text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">

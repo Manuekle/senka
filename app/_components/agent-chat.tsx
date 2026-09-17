@@ -10,6 +10,7 @@ import {
 } from "eve/client";
 import { useEveAgent } from "eve/react";
 import { HugeiconsIcon } from "@/components/icons/icon";
+import { AppIcon } from "@/components/app-icon";
 import { Add01Icon, AlertCircleIcon, Logout01Icon } from "@hugeicons/core-free-icons";
 import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -24,6 +25,7 @@ import { useT } from "@/lib/i18n/provider";
 import { cn } from "@/lib/utils";
 import { Beam } from "@/components/ui/beam";
 import { saveConversation } from "@/lib/dashboard-store";
+import { dailyGreeting } from "@/lib/chat-greeting";
 import { AgentMessage, type AgentInputResponse } from "./agent-message";
 import {
   ModelPicker,
@@ -103,7 +105,7 @@ function Pill({
   readonly title?: string;
 }) {
   const className =
-    "inline-flex items-center rounded-full border border-border bg-card/50 px-2.5 py-0.5 font-medium text-muted-foreground text-xs shadow-[var(--shadow-inset)] transition-all duration-150 hover:border-input hover:text-foreground";
+    "inline-flex items-center rounded-full border border-border bg-card/50 px-2.5 py-0.5 font-medium text-muted-foreground text-xs shadow-[var(--shadow-inset)] transition duration-150 hover:border-input hover:text-foreground";
   if (href) {
     return (
       <a
@@ -546,8 +548,11 @@ function ConnectedAgentSession({
 
   return (
     <div className="page-enter relative flex h-full flex-col overflow-hidden">
+      {/* Dense 48px grid — lines only (no baked fill: an opaque tile would
+          sheet over the greeting, since this positioned overlay paints above
+          in-flow content). Faded toward the edges by .bg-pattern-fade. */}
       {isEmpty ? (
-        <div className="pointer-events-none absolute inset-0 bg-pattern bg-pattern-grid bg-pattern-fade opacity-20" />
+        <div className="pointer-events-none absolute inset-0 bg-pattern bg-pattern-grid bg-pattern-fade" />
       ) : null}
       {isEmpty ? null : (
         <header className="flex h-14 shrink-0 items-center justify-between gap-3 px-4 sm:px-6">
@@ -645,7 +650,10 @@ function ConnectedAgentSession({
 
       <div
         className={cn(
-          "mx-auto w-full px-4 sm:px-6",
+          // `relative` paints this (logo, greeting, composer, suggestions)
+          // above the absolutely positioned pattern overlay: both are
+          // positioned at z-index auto, so tree order decides.
+          "relative mx-auto w-full px-4 sm:px-6",
           isEmpty
             ? "flex max-w-xl flex-1 flex-col items-center justify-center gap-8 pb-[10vh]"
             : "max-w-3xl shrink-0 pb-6",
@@ -653,9 +661,17 @@ function ConnectedAgentSession({
       >
         {isEmpty ? (
           <div className="flex flex-col items-center gap-6 text-center">
-            <h1 className="text-4xl font-semibold sm:text-5xl">
-              <span className="text-foreground">senka</span>
-            </h1>
+            {/* Daily rotating greeting with the agent mark beside it —
+                Claude-style short question, new one every day, no repeats
+                within a 7-day cycle (see lib/chat-greeting.ts). */}
+            {/* The logo and greeting stand bare — no tile, border or
+                background containing them (see lib/chat-greeting.ts). */}
+            <div className="flex items-center justify-center gap-3">
+              <AppIcon size={32} className="shrink-0 text-foreground" />
+              <h1 className="font-cooper text-3xl font-semibold text-foreground sm:text-4xl">
+                {dailyGreeting()}
+              </h1>
+            </div>
             <p className="max-w-sm text-balance text-sm leading-relaxed text-muted-foreground">
               {t("chat.tagline")}
             </p>

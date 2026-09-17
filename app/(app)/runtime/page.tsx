@@ -296,7 +296,7 @@ export default function RuntimePage() {
           ) : null}
 
           {tab === "loaded" ? <LoadedPanel result={info} isLoading={isLoading} /> : null}
-          {tab === "team" ? <TeamPanel /> : null}
+          {tab === "team" ? <TeamPanel feedOnly={false} /> : null}
           </div>
         </div>
       </div>

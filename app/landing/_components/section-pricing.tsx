@@ -215,7 +215,7 @@ export function PricingSection() {
                             list that brightens in order is someone reading
                             down it, which is what the card wants you to do. */}
                         <HugeiconsIcon
-                          className="mt-1 shrink-0 text-muted-foreground transition-colors duration-500 group-hover:text-foreground"
+                          className="mt-1 shrink-0 text-muted-foreground transition-colors duration-200 group-hover:text-foreground"
                           icon={CheckIcon}
                           size={15}
                           strokeWidth={2}

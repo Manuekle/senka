@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { HugeiconsIcon } from "@/components/icons/icon";
 import {
-  ArrowLeft02Icon,
+  ArrowLeft01Icon,
   AiImagineIcon,
   PanelLeftIcon,
   AiPaintbrushIcon,
@@ -379,7 +379,7 @@ export default function AgentBuilderPage() {
             onClick={() => router.push("/agents")}
             className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-sm font-medium transition-colors hover:bg-accent"
           >
-            <HugeiconsIcon icon={ArrowLeft02Icon} size={14} strokeWidth={1.75} />
+            <HugeiconsIcon icon={ArrowLeft01Icon} size={14} strokeWidth={1.75} />
             {t("builder.backToList")}
           </button>
         </div>
@@ -396,7 +396,7 @@ export default function AgentBuilderPage() {
             onClick={() => router.push("/agents")}
             className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-sm font-medium transition-colors hover:bg-accent"
           >
-            <HugeiconsIcon icon={ArrowLeft02Icon} size={14} strokeWidth={1.75} />
+            <HugeiconsIcon icon={ArrowLeft01Icon} size={14} strokeWidth={1.75} />
             {t("builder.backToList")}
           </button>
         </div>
@@ -453,7 +453,7 @@ export default function AgentBuilderPage() {
                 aria-label={t("builder.backToList")}
                 className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               >
-                <HugeiconsIcon icon={ArrowLeft02Icon} size={16} strokeWidth={1.75} />
+                <HugeiconsIcon icon={ArrowLeft01Icon} size={16} strokeWidth={1.75} />
               </button>
             </TooltipTrigger>
             <TooltipContent side="bottom">{t("builder.backToList")}</TooltipContent>
@@ -599,8 +599,8 @@ export default function AgentBuilderPage() {
               className={cn(
                 "absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center",
                 "h-9 w-[5px] rounded-full bg-foreground/60 shadow-[var(--shadow-soft)]",
-                "origin-center transition-transform duration-200 ease-out",
-                isResizing ? "scale-100" : "scale-0 group-hover:scale-100",
+                "origin-center transition-[transform,opacity] duration-200 ease-out",
+                isResizing ? "scale-100" : "scale-95 opacity-0 group-hover:scale-100 group-hover:opacity-100",
               )}
             />
           </div>

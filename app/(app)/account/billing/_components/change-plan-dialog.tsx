@@ -4,8 +4,8 @@ import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { HugeiconsIcon } from "@/components/icons/icon";
 import {
-  ArrowLeft02Icon,
-  ArrowUp02Icon,
+  ArrowLeft01Icon,
+  ArrowUp01Icon,
   CheckmarkCircle02Icon,
   InvoiceIcon,
   MinusSignCircleIcon,
@@ -203,7 +203,7 @@ export function ChangePlanDialog({
                             {busy === plan.id ? (
                               <Spinner />
                             ) : (
-                              <HugeiconsIcon icon={ArrowUp02Icon} size={16} strokeWidth={1.75} />
+                              <HugeiconsIcon icon={ArrowUp01Icon} size={16} strokeWidth={1.75} />
                             )}
                             {t("billing.upgradeAction", { plan: t(plan.nameKey) })}
                           </Button>

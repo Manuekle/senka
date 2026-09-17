@@ -321,7 +321,7 @@ export default function FormsPage() {
                 answered them, so this jumps to the gallery. */}
             <Link
               href={forms.length > 0 ? "/forms/new?pick=1" : "/forms/new"}
-              className="inline-flex self-start items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium shadow-[var(--shadow-inset)] transition-all duration-150 hover:border-input hover:bg-accent sm:self-auto"
+              className="inline-flex self-start items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium shadow-[var(--shadow-inset)] transition duration-150 hover:border-input hover:bg-accent sm:self-auto"
             >
               <HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={1.75} />
               {t("forms.new")}
@@ -338,7 +338,7 @@ export default function FormsPage() {
                 <p className="max-w-xs text-xs text-muted-foreground">{t("forms.emptyHint")}</p>
                 <Link
                   href="/forms/new"
-                  className="mt-2 inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium shadow-[var(--shadow-inset)] transition-all duration-150 hover:border-input hover:bg-accent"
+                  className="mt-2 inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium shadow-[var(--shadow-inset)] transition duration-150 hover:border-input hover:bg-accent"
                 >
                   <HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={1.75} />
                   {t("forms.new")}

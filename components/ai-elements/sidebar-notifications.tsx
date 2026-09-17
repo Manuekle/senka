@@ -120,7 +120,7 @@ export function SidebarNotifications({
       aria-label={t("notifications.title")}
       className={cn(
         "relative flex items-center gap-2 rounded-md px-2.5 py-1.5 text-xs font-medium text-muted-foreground",
-        "transition-all duration-150 hover:bg-accent hover:text-foreground",
+        "transition duration-150 hover:bg-accent hover:text-foreground",
         collapsed && "size-8 justify-center p-0",
         className,
       )}

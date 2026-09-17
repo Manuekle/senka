@@ -7,6 +7,7 @@ import {
 } from "@/lib/credentials";
 import { parseConfigFile } from "@/lib/env-file";
 import { apiError, apiErrorBody, missingField, withApiErrors } from "@/lib/api-error";
+import { requireOwner } from "@/lib/owner-gate";
 
 // POST /api/settings/import — take a .env or JSON file the user already has
 // and load the values into the credential store.
@@ -21,6 +22,11 @@ const KNOWN_KEYS = new Set<string>(
 );
 
 export const POST = withApiErrors(async function POST(request: NextRequest) {
+  // Import replaces credential values wholesale — write access to the same
+  // secrets the export above reads, so the same gate.
+  const denied = await requireOwner(request);
+  if (denied) return denied;
+
   let text = "";
 
   const contentType = request.headers.get("content-type") ?? "";

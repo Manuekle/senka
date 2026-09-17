@@ -1,9 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { getMaskedCredentials } from "@/lib/credentials";
 import { resolveProvider } from "@/lib/ai-provider";
 import { listAutomations } from "@/lib/business-store";
 import { withApiErrors } from "@/lib/api-error";
 import { PROVIDER_CREDENTIAL_KEY, type AiProvider } from "@/lib/model-catalog";
+import { requireOwner } from "@/lib/owner-gate";
 
 // GET /api/health — what the sidebar's status dot reads.
 //
@@ -18,7 +19,7 @@ const CHANNEL_KEYS = {
   instagram: ["INSTAGRAM_APP_SECRET", "INSTAGRAM_ACCESS_TOKEN", "INSTAGRAM_ACCOUNT_ID", "INSTAGRAM_VERIFY_TOKEN"],
 } as const;
 
-export const GET = withApiErrors(async function GET() {
+export const GET = withApiErrors(async function GET(request: NextRequest) {
   // The store is the only hard dependency: with it unreadable nothing on any
   // page can load, which is the one condition worth painting red.
   let storeOk = true;
@@ -44,6 +45,14 @@ export const GET = withApiErrors(async function GET() {
   } catch {
     // Credentials unreadable is a degraded state, not a dead one — the web
     // chat still works off whatever is in the environment.
+  }
+
+  // For anyone but the owner the body is one bit: is this installation up.
+  // The full shape doubles as an unauthenticated inventory — which channel is
+  // connected, which model provider, the Node version, the uptime — enough to
+  // pick a target, and the status dot never needed any of it.
+  if ((await requireOwner(request)) !== null) {
+    return NextResponse.json({ ok: storeOk });
   }
 
   // Without a model key the agent cannot answer anyone: the app is up but it

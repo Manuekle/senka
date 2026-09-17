@@ -2,7 +2,7 @@
 
 import { AuthBackdrop } from "@/app/_components/auth-backdrop";
 import { HugeiconsIcon } from "@/components/icons/icon";
-import { ArrowLeft02Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
@@ -102,8 +102,8 @@ export default function ForgotPasswordPage() {
             href="/login"
           >
             <HugeiconsIcon
-              className="transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-x-0.5"
-              icon={ArrowLeft02Icon}
+              className="transition-transform duration-200 ease-expo-out group-hover:-translate-x-0.5"
+              icon={ArrowLeft01Icon}
               size={14}
               strokeWidth={2}
             />

@@ -3,6 +3,7 @@ import { intakeLead } from "@/lib/lead-intake";
 import type { LeadInput } from "@/lib/types";
 import { type NextRequest, NextResponse } from "next/server";
 import { apiError, withApiErrors } from "@/lib/api-error";
+import { rateLimit } from "@/lib/rate-limit";
 
 function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
@@ -44,6 +45,14 @@ export const POST = withApiErrors(async function POST(request: NextRequest) {
     return apiError("unauthorized");
   }
 
+  // The most public write in the app: intake creates contacts, opens chats
+  // and fires automations that message people. A secret that leaks must not
+  // mean unlimited writes, so the budget is per address on the same shared
+  // limiter the automation webhook uses.
+  if (!rateLimit("public-webhook", request, { max: 30, windowMs: 10 * 60_000 }).allowed) {
+    return apiError("rate_limited");
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -61,7 +70,12 @@ export const POST = withApiErrors(async function POST(request: NextRequest) {
 // A public webhook URL gets opened in a browser sooner or later. Answering the
 // framework's bare 405 leaves the person staring at an empty page; this says
 // the endpoint is alive and what it wants instead.
-export const GET = withApiErrors(function GET() {
+export const GET = withApiErrors(function GET(request: NextRequest) {
+  // Browsers land here by pasting the URL; the budget also stops the GET from
+  // being the cheap probe that maps which webhook URLs answer what.
+  if (!rateLimit("public-webhook", request, { max: 30, windowMs: 10 * 60_000 }).allowed) {
+    return apiError("rate_limited");
+  }
   return apiError("method_not_allowed", {
     message: "This endpoint only accepts POST from your lead form or webhook.",
   });

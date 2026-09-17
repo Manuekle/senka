@@ -14,6 +14,7 @@ import { Card } from "../../_components/dashboard-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ErrorBanner } from "@/components/ui/error-banner";
+import Image from "next/image";
 import { SignOutButton } from "@/components/sign-out-button";
 import { Skeleton, SkeletonBar } from "@/components/ai-elements/skeleton";
 import { LicenseCard } from "@/components/ai-elements/license-card";
@@ -199,11 +200,12 @@ export default function AccountPage() {
                   className="group relative flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-muted to-accent text-lg font-semibold text-foreground/70 shadow-[var(--shadow-inset)] transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {hasAvatar ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img
+                    <Image
                       src={`/api/account/avatar?v=${avatarTs}`}
                       alt=""
-                      className="size-full object-cover"
+                      fill
+                      sizes="56px"
+                      className="object-cover"
                     />
                   ) : googlePicture ? (
                     /* eslint-disable-next-line @next/next/no-img-element */

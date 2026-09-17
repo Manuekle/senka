@@ -224,7 +224,7 @@ export default function AgentsPage() {
               <ProviderStatusBadge data={catalog} />
               <Dialog open={createOpen} onOpenChange={setCreateOpen}>
                 <DialogTrigger asChild>
-                  <button className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium shadow-[var(--shadow-inset)] transition-all duration-150 hover:border-input hover:bg-accent">
+                  <button className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium shadow-[var(--shadow-inset)] transition duration-150 hover:border-input hover:bg-accent">
                     <HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={1.75} />
                     {t("agents.new")}
                   </button>

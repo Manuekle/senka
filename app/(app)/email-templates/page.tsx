@@ -47,6 +47,7 @@ import { VariableInspector } from "@/components/email-editor/variable-inspector"
 import { Skeleton, SkeletonBar } from "@/components/ai-elements/skeleton";
 import { fetchJson, type UiError } from "@/lib/api-error-message";
 import { useT } from "@/lib/i18n/provider";
+import { useModKey } from "@/lib/hooks/use-mod-key";
 import { useSound } from "@/components/sound-provider";
 import { useCelebrate } from "@/components/use-celebrate";
 import { cn } from "@/lib/utils";
@@ -86,6 +87,7 @@ const NO_PREVIEW: PreviewState = { html: null, subject: null, error: null, loadi
  */
 export default function EmailTemplatesPage() {
   const t = useT();
+  const mod = useModKey();
   const { cue } = useSound();
   const celebrate = useCelebrate();
 
@@ -543,15 +545,22 @@ export default function EmailTemplatesPage() {
                   type="button"
                   onClick={() => void handleSave()}
                   disabled={!dirty || saveStatus === "saving"}
+                  aria-keyshortcuts="Meta+S Control+S"
                   className={cn(
-                    "rounded-lg px-3 py-1.5 text-sm font-medium",
+                    "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium",
                     "transition-[background-color,box-shadow,opacity] duration-150 ease-out",
                     dirty
                       ? "bg-primary text-primary-foreground shadow-[var(--shadow-button)] active:scale-[0.98]"
                       : "cursor-not-allowed border border-border bg-card text-muted-foreground opacity-40 shadow-[var(--shadow-inset)]",
                   )}
                 >
-                  {t("emailTemplates.save")}
+                  <span className="hidden sm:inline">{t("emailTemplates.save")}</span>
+                  <kbd
+                    aria-hidden="true"
+                    className="rounded border border-current/30 bg-black/5 px-1 font-mono text-[10px] leading-4"
+                  >
+                    {mod}S
+                  </kbd>
                 </button>
               )
             ) : null}
@@ -655,8 +664,8 @@ export default function EmailTemplatesPage() {
             className={cn(
               "absolute top-1/2 left-1/2 flex h-9 w-[5px] -translate-x-1/2 -translate-y-1/2",
               "rounded-full bg-foreground/60 shadow-[var(--shadow-soft)]",
-              "origin-center transition-transform duration-200 ease-out",
-              isResizing ? "scale-100" : "scale-0 group-hover:scale-100",
+              "origin-center transition-[transform,opacity] duration-200 ease-out",
+              isResizing ? "scale-100" : "scale-95 opacity-0 group-hover:scale-100 group-hover:opacity-100",
             )}
           />
         </div>

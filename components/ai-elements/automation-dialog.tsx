@@ -293,7 +293,7 @@ export function AutomationDialog({
                 {TRIGGER_OPTIONS.map((opt) => (
                   <button
                     className={cn(
-                      "rounded-lg border p-2.5 text-left text-sm transition-all duration-150",
+                      "rounded-lg border p-2.5 text-left text-sm transition duration-150",
                       trigger === opt.value
                         ? "border-foreground/20 bg-foreground/5 text-foreground shadow-[var(--shadow-inset)]"
                         : "border-border bg-card/50 text-muted-foreground hover:border-input hover:text-foreground",

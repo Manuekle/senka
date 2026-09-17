@@ -13,7 +13,7 @@ import {
 import { HugeiconsIcon } from "@/components/icons/icon";
 import {
   AlertCircleIcon,
-  ArrowLeft02Icon,
+  ArrowLeft01Icon,
   SearchAreaIcon,
   FileEditIcon,
   PanelLeftIcon,
@@ -289,7 +289,7 @@ export default function FormWorkspacePage() {
                 aria-label={t("forms.detail.back")}
                 className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-foreground"
               >
-                <HugeiconsIcon icon={ArrowLeft02Icon} size={16} strokeWidth={1.75} />
+                <HugeiconsIcon icon={ArrowLeft01Icon} size={16} strokeWidth={1.75} />
               </Link>
             </TooltipTrigger>
             <TooltipContent side="bottom">{t("forms.detail.back")}</TooltipContent>
@@ -491,8 +491,8 @@ export default function FormWorkspacePage() {
             className={cn(
               "absolute top-1/2 left-1/2 flex h-9 w-[5px] -translate-x-1/2 -translate-y-1/2",
               "rounded-full bg-foreground/60 shadow-[var(--shadow-soft)]",
-              "origin-center transition-transform duration-200 ease-out",
-              isResizing ? "scale-100" : "scale-0 group-hover:scale-100",
+              "origin-center transition-[transform,opacity] duration-200 ease-out",
+              isResizing ? "scale-100" : "scale-95 opacity-0 group-hover:scale-100 group-hover:opacity-100",
             )}
           />
         </div>

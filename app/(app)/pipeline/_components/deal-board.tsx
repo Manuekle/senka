@@ -27,8 +27,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Add01Icon,
   AlertCircleIcon,
-  ArrowLeft02Icon,
-  ArrowRight02Icon,
+  ArrowLeft01Icon,
+  ArrowRight01Icon,
   Call02Icon,
   Cancel01Icon,
   CheckmarkCircle02Icon,
@@ -702,7 +702,7 @@ export function DealBoard({
         ? createPortal(
             <div
               className={cn(
-                "fixed bottom-5 left-1/2 z-40 -translate-x-1/2 transition-all duration-300",
+                "fixed bottom-5 left-1/2 z-40 -translate-x-1/2 transition duration-300",
                 sliderVisible
                   ? "translate-y-0 opacity-100"
                   : "pointer-events-none translate-y-3 opacity-0",
@@ -710,7 +710,7 @@ export function DealBoard({
             >
               <div className="flex items-center gap-1 rounded-full border border-border bg-card/90 py-1.5 pr-3 pl-1.5 shadow-[var(--shadow-float)] backdrop-blur-sm">
                 <SliderButton
-                  icon={ArrowLeft02Icon}
+                  icon={ArrowLeft01Icon}
                   label={locale === "es" ? "Anterior" : "Previous"}
                   disabled={shuttle.frac <= 0}
                   onClick={() => nudge(-1)}
@@ -739,7 +739,7 @@ export function DealBoard({
                   />
                 </div>
                 <SliderButton
-                  icon={ArrowRight02Icon}
+                  icon={ArrowRight01Icon}
                   label={locale === "es" ? "Siguiente" : "Next"}
                   disabled={shuttle.frac >= 1}
                   onClick={() => nudge(1)}
@@ -903,7 +903,7 @@ const DealCard = memo(function DealCard({
                   </SelectContent>
                 </Select>
                 <Button type="button" variant="ghost" size="icon-xs" aria-label={locale === "es" ? `Abrir ${deal.title}` : `Open ${deal.title}`} onClick={() => onEdit(deal)} onPointerDown={(event) => event.stopPropagation()} className="text-muted-foreground hover:bg-accent/70 hover:text-foreground" style={{ width: q(28), height: q(28) }}>
-                  <HugeiconsIcon icon={ArrowRight02Icon} size={q(13)} strokeWidth={1.75} />
+                  <HugeiconsIcon icon={ArrowRight01Icon} size={q(13)} strokeWidth={1.75} />
                 </Button>
                 <Button type="button" variant="ghost" size="icon-xs" aria-label={t("pipeline.delete")} onClick={() => onDelete(deal)} onPointerDown={(event) => event.stopPropagation()} className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive" style={{ width: q(28), height: q(28) }}>
                   <HugeiconsIcon icon={Delete01Icon} size={q(13)} strokeWidth={1.75} />
@@ -1027,7 +1027,7 @@ const DealCard = memo(function DealCard({
                 className="shrink-0 text-muted-foreground hover:bg-accent/70 hover:text-foreground"
                 style={{ width: q(28), height: q(28) }}
               >
-                <HugeiconsIcon icon={ArrowRight02Icon} size={q(13)} strokeWidth={1.75} />
+                <HugeiconsIcon icon={ArrowRight01Icon} size={q(13)} strokeWidth={1.75} />
               </Button>
               <Button
                 type="button" variant="ghost" size="icon-xs"

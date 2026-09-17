@@ -43,7 +43,17 @@ async function poll(): Promise<void> {
   try {
     const res = await fetch("/api/health");
     if (!res.ok) throw new Error("unreachable");
-    publish({ health: (await res.json()) as Health, reachable: true });
+    const data = (await res.json()) as Partial<Health> | null;
+    // Not every caller gets the full shape: the route answers non-owners with
+    // one bit (`{ ok: storeOk }`). Publishing that as a Health would put a
+    // truthy object with no `checks` into the snapshot, and the first reader
+    // to reach into `health.checks.ai` would crash. An incomplete body means
+    // "reachable, but not our business to grade" — no health, dot stays gray.
+    if (data && typeof data.checks?.ai === "boolean") {
+      publish({ health: data as Health, reachable: true });
+    } else {
+      publish({ health: null, reachable: true });
+    }
   } catch {
     // A request that never lands is its own answer — the server not
     // responding is exactly the case the dot exists to show — so the last

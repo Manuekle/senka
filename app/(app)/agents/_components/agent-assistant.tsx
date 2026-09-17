@@ -2,7 +2,7 @@
 
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { HugeiconsIcon } from "@/components/icons/icon";
-import { ArrowUp02Icon, Delete02Icon } from "@hugeicons/core-free-icons";
+import { ArrowUp01Icon, Delete02Icon } from "@hugeicons/core-free-icons";
 import { useFitsLines } from "@/lib/hooks/use-line-count";
 import { TodoList, type TodoItem } from "@/components/agents/todo-list";
 import { ApprovalCard } from "@/components/agents/approval-card";
@@ -270,7 +270,7 @@ export function AgentAssistant({
                   : "bg-foreground/[0.06] text-muted-foreground",
               )}
             >
-              <HugeiconsIcon icon={ArrowUp02Icon} size={16} strokeWidth={1.75} />
+              <HugeiconsIcon icon={ArrowUp01Icon} size={16} strokeWidth={1.75} />
             </button>
           </Beam>
         </div>

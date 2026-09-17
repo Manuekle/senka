@@ -1,23 +1,17 @@
 {
   "version": 1,
   "skills": {
-    "react-and-nextjs-data-visualization": {
-      "source": "openai/plugins",
+    "emil-design-eng": {
+      "source": "emilkowalski/skills",
       "sourceType": "github",
-      "skillPath": "plugins/build-web-data-visualization/skills/react-and-nextjs-data-visualization/SKILL.md",
-      "computedHash": "59d86c22ad2769d35214a8878bd495ec2eecc31b501c6fb5bc15017a238510e9"
+      "skillPath": "skills/emil-design-eng/SKILL.md",
+      "computedHash": "51f2537e04d15911b41d78e2de24c36a0e26d41beae15e82a954fe5496a5eda9"
     },
     "text-to-speech": {
       "source": "elevenlabs/skills",
       "sourceType": "github",
       "skillPath": "text-to-speech/SKILL.md",
       "computedHash": "a07858869c331494278dc201fde7c002ab4155cf93b642cc0f712e8e86793be9"
-    },
-    "vercel-connect": {
-      "source": "vercel/vercel-plugin",
-      "sourceType": "github",
-      "skillPath": "skills/vercel-connect/SKILL.md",
-      "computedHash": "49f496ff7b477473ccbf14376bf940a2a1071d118dcbc1a97f34810f4f2da70c"
     }
   }
 }

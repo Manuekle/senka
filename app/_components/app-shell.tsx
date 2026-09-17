@@ -29,6 +29,7 @@ import { NotificationBadge } from "@/components/ai-elements/notification-badge";
 import { SidebarNotifications } from "@/components/ai-elements/sidebar-notifications";
 import { SidebarStatus } from "@/components/ai-elements/sidebar-status";
 import { SupportDialog } from "@/components/ai-elements/support-dialog";
+import { ShortcutsDialog } from "@/components/ai-elements/shortcuts-dialog";
 import { CommandPalette } from "@/components/ai-elements/command-palette";
 import { BusinessSwitcher } from "./business-switcher";
 import { ReviewPrompt } from "./review-prompt";
@@ -319,6 +320,7 @@ export function AppShell({ children }: { readonly children: ReactNode }) {
               both above the preferences, which are set once and forgotten. */}
           <SidebarNotifications collapsed={collapsed} className={collapsed ? undefined : "w-full"} />
           <SupportDialog collapsed={collapsed} className={collapsed ? undefined : "w-full"} />
+          <ShortcutsDialog collapsed={collapsed} className={collapsed ? undefined : "w-full"} />
 
           {/* Preferences: icon-only in a single row when expanded. Three
               full-width rows for switches nobody touches twice made the foot
@@ -592,6 +594,7 @@ function MobileNav({
           >
             <SidebarNotifications className="w-full" />
             <SupportDialog className="w-full" />
+            <ShortcutsDialog className="w-full" />
 
             {/* Preference toggles — row of icon buttons */}
             <div className="mt-0.5 flex items-center gap-0.5">

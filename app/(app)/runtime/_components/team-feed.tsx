@@ -2,7 +2,7 @@
 
 import type { IconSvgElement } from "@hugeicons/react";
 import { AnimatePresence, motion, useReducedMotion, type Transition, type Variants } from "motion/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { HugeiconsIcon } from "@/components/icons/icon";
 import {
   AiChat02Icon,
@@ -19,6 +19,9 @@ import { EASE_OUT } from "@/lib/ease";
 import { useI18n } from "@/lib/i18n/provider";
 import type { TeamAction, TeamEvent, TeamState } from "@/lib/team-types";
 import { cn } from "@/lib/utils";
+import { BloubLive } from "@/components/pet/bloub-live";
+import type { ColorId, ExpressionId } from "@/lib/bloub";
+import { petIdentity } from "./pet-icons";
 
 // The autonomous team, drawn as the conversation it is.
 //
@@ -45,15 +48,15 @@ export type FeedAgent = {
 };
 
 const TONES = {
-  blue: { tile: "bg-blue-500/10 text-blue-600 dark:bg-blue-400/15 dark:text-blue-300", text: "text-blue-600 dark:text-blue-400" },
-  violet: { tile: "bg-violet-500/10 text-violet-600 dark:bg-violet-400/15 dark:text-violet-300", text: "text-violet-600 dark:text-violet-400" },
-  amber: { tile: "bg-amber-500/10 text-amber-600 dark:bg-amber-400/15 dark:text-amber-300", text: "text-amber-600 dark:text-amber-400" },
-  emerald: { tile: "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-400/15 dark:text-emerald-300", text: "text-emerald-600 dark:text-emerald-400" },
-  sky: { tile: "bg-sky-500/10 text-sky-600 dark:bg-sky-400/15 dark:text-sky-300", text: "text-sky-600 dark:text-sky-400" },
-  rose: { tile: "bg-rose-500/10 text-rose-600 dark:bg-rose-400/15 dark:text-rose-300", text: "text-rose-600 dark:text-rose-400" },
-  orange: { tile: "bg-orange-500/10 text-orange-600 dark:bg-orange-400/15 dark:text-orange-300", text: "text-orange-600 dark:text-orange-400" },
-  pink: { tile: "bg-pink-500/10 text-pink-600 dark:bg-pink-400/15 dark:text-pink-300", text: "text-pink-600 dark:text-pink-400" },
-  teal: { tile: "bg-teal-500/10 text-teal-600 dark:bg-teal-400/15 dark:text-teal-300", text: "text-teal-600 dark:text-teal-400" },
+  blue: { tile: "bg-blue-500/10 text-blue-600 dark:bg-blue-400/15 dark:text-blue-300", pet: "bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-300", text: "text-blue-600 dark:text-blue-400" },
+  violet: { tile: "bg-violet-500/10 text-violet-600 dark:bg-violet-400/15 dark:text-violet-300", pet: "bg-violet-100 text-violet-600 dark:bg-violet-950 dark:text-violet-300", text: "text-violet-600 dark:text-violet-400" },
+  amber: { tile: "bg-amber-500/10 text-amber-600 dark:bg-amber-400/15 dark:text-amber-300", pet: "bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-300", text: "text-amber-600 dark:text-amber-400" },
+  emerald: { tile: "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-400/15 dark:text-emerald-300", pet: "bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300", text: "text-emerald-600 dark:text-emerald-400" },
+  sky: { tile: "bg-sky-500/10 text-sky-600 dark:bg-sky-400/15 dark:text-sky-300", pet: "bg-sky-100 text-sky-600 dark:bg-sky-950 dark:text-sky-300", text: "text-sky-600 dark:text-sky-400" },
+  rose: { tile: "bg-rose-500/10 text-rose-600 dark:bg-rose-400/15 dark:text-rose-300", pet: "bg-rose-100 text-rose-600 dark:bg-rose-950 dark:text-rose-300", text: "text-rose-600 dark:text-rose-400" },
+  orange: { tile: "bg-orange-500/10 text-orange-600 dark:bg-orange-400/15 dark:text-orange-300", pet: "bg-orange-100 text-orange-600 dark:bg-orange-950 dark:text-orange-300", text: "text-orange-600 dark:text-orange-400" },
+  pink: { tile: "bg-pink-500/10 text-pink-600 dark:bg-pink-400/15 dark:text-pink-300", pet: "bg-pink-100 text-pink-600 dark:bg-pink-950 dark:text-pink-300", text: "text-pink-600 dark:text-pink-400" },
+  teal: { tile: "bg-teal-500/10 text-teal-600 dark:bg-teal-400/15 dark:text-teal-300", pet: "bg-teal-100 text-teal-600 dark:bg-teal-950 dark:text-teal-300", text: "text-teal-600 dark:text-teal-400" },
 } as const;
 
 type Tone = keyof typeof TONES;
@@ -68,8 +71,11 @@ const LABEL = "font-mono text-[11px] uppercase tracking-[0.08em] text-muted-fore
 const ENTER: Transition = { duration: 0.28, ease: EASE_OUT };
 
 /** Entry for a thread row, and the stagger its children (header, text,
- *  actions) inherit. Reduced motion keeps the fade and drops the travel. */
-function threadVariants(reduce: boolean): { entry: Variants; item: Variants } {
+ *  actions) inherit. Reduced motion keeps the fade and drops the travel.
+ *  `line` is a sub-variant so the "writing" row above and the reply replacing
+ *  it animate on separate beats — one thread variant cannot do both, because
+ *  the reply's beat runs only when the writing row exits. */
+function threadVariants(reduce: boolean): { entry: Variants; item: Variants; line: Variants } {
   const from = (y: number) => (reduce ? { opacity: 0 } : { opacity: 0, y });
   return {
     entry: {
@@ -78,10 +84,11 @@ function threadVariants(reduce: boolean): { entry: Variants; item: Variants } {
       exit: { opacity: 0, transition: { duration: 0.14, ease: EASE_OUT } },
     },
     item: { hidden: from(4), show: { opacity: 1, y: 0, transition: ENTER } },
+    line: { hidden: from(4), show: { opacity: 1, y: 0, transition: { ...ENTER, delay: 0.18 } } },
   };
 }
 
-type Persona = { readonly id: string; readonly name: string; readonly description: string; readonly tone: Tone; readonly icon?: IconSvgElement };
+type Persona = { readonly id: string; readonly name: string; readonly description: string; readonly tone: Tone };
 
 function hashTone(id: string): Tone {
   let hash = 0;
@@ -94,35 +101,77 @@ function persona(agents: readonly FeedAgent[], id: string, fallbackName = ""): P
   const template = getAgentTemplate(agent?.iconKey);
   const accent = template?.accent.match(/bg-(\w+)-500/)?.[1];
   const tone = accent && accent in TONES ? (accent as Tone) : hashTone(id);
-  return { id, name: agent?.name ?? (fallbackName || id), description: agent?.description ?? "", tone, icon: template?.icon };
+  return { id, name: agent?.name ?? (fallbackName || id), description: agent?.description ?? "", tone };
 }
 
-function initials(name: string): string {
-  const [first = "?", second = ""] = name.trim().split(/\s+/);
-  return (first[0] + (second[0] ?? "")).toUpperCase();
-}
-
-const AVATAR_SIZE = {
-  xs: { box: "size-5 text-[9px]", icon: 11 },
-  sm: { box: "size-8 text-[11px]", icon: 15 },
-  lg: { box: "size-12 text-sm", icon: 22 },
+const AVATAR_PET_PX = {
+  xs: 20,
+  sm: 32,
+  lg: 48,
 } as const;
 
-function Avatar({ who, size, className }: { readonly who: Persona; readonly size: keyof typeof AVATAR_SIZE; readonly className?: string }) {
+/**
+ * A member's personal pet: stable shape + tone color + personality face per
+ * agent (see `petIdentity`), on a tone-tinted disc. Only whoever holds the
+ * floor is live (`BloubLive` loop + "attentif"); everyone else is a frozen
+ * first frame — one animated pet per conversation, and the speaker is
+ * obvious. Decorative: the name always sits next to it as text.
+ */
+function Avatar({ who, size, expression, live = false, className, avatarClass }: {
+  readonly who: Persona;
+  readonly size: keyof typeof AVATAR_PET_PX;
+  readonly expression?: ExpressionId;
+  readonly live?: boolean;
+  readonly className?: string;
+  readonly avatarClass?: string;
+}) {
+  const identity = petIdentity(who.id, who.tone);
   return (
-    <span
-      aria-hidden="true"
-      className={cn("grid shrink-0 place-items-center rounded-full font-semibold shadow-[var(--shadow-inset)]", TONES[who.tone].tile, AVATAR_SIZE[size].box, className)}
-    >
-      {who.icon ? <HugeiconsIcon icon={who.icon} size={AVATAR_SIZE[size].icon} strokeWidth={1.75} /> : initials(who.name)}
-    </span>
+    <BloubLive
+      expression={expression ?? identity.expression}
+      shape={identity.shape}
+      color={identity.color}
+      size={AVATAR_PET_PX[size]}
+      still={!live}
+      className={cn("shrink-0 rounded-full", TONES[who.tone].pet, className, avatarClass)}
+    />
   );
 }
 
-function AvatarStack({ people, size }: { readonly people: readonly Persona[]; readonly size: keyof typeof AVATAR_SIZE }) {
+function AvatarStack({ people, size }: { readonly people: readonly Persona[]; readonly size: keyof typeof AVATAR_PET_PX }) {
+  // Transitions.dev avatar-group hover: the hovered pet lifts and its
+  // neighbors trail off with distance falloff. Timing function goes inline
+  // BEFORE the variable writes; mouseleave resets with the out-ease.
+  const hover = (group: HTMLElement | null, activeIdx: number | null) => {
+    if (!group) return;
+    const items = Array.from(group.children) as HTMLElement[];
+    const ease = activeIdx === null ? "var(--avatar-ease-out)" : "var(--avatar-ease-in)";
+    items.forEach((el, i) => {
+      el.style.transitionTimingFunction = ease;
+      if (activeIdx === null) {
+        el.style.setProperty("--shift", "0px");
+        el.style.setProperty("--scale-active", "1");
+        return;
+      }
+      const distance = Math.abs(i - activeIdx);
+      el.style.setProperty("--shift", (-4 * Math.pow(0.45, distance)).toFixed(3) + "px");
+      el.style.setProperty("--scale-active", i === activeIdx ? "1.05" : "1");
+    });
+  };
   return (
-    <span className="flex -space-x-1.5">
-      {people.slice(0, 4).map((who) => <Avatar key={who.id} who={who} size={size} className="ring-2 ring-card" />)}
+    <span
+      className="t-avatar-group flex -space-x-1.5"
+      onMouseLeave={(e) => hover(e.currentTarget, null)}
+    >
+      {people.slice(0, 4).map((who, i) => (
+        <span
+          key={who.id}
+          className="t-avatar"
+          onMouseEnter={(e) => hover(e.currentTarget.parentElement, i)}
+        >
+          <Avatar who={who} size={size} className="ring-1 ring-border" />
+        </span>
+      ))}
     </span>
   );
 }
@@ -193,36 +242,71 @@ function actionText(t: Translate, action: TeamAction): string {
 }
 
 const STATUS_DOT: Record<TeamEvent["status"], string> = {
-  queued: "bg-muted-foreground/40",
-  running: "bg-emerald-500",
-  completed: "bg-foreground/30",
+  queued: "bg-amber-400",
+  running: "bg-sky-500",
+  completed: "bg-emerald-500",
   failed: "bg-destructive",
 };
 
 function StatusDot({ status }: { readonly status: TeamEvent["status"] }) {
   return (
     <span aria-hidden="true" className="relative inline-flex size-2">
-      {status === "running" ? <span className="absolute inset-0 animate-ping rounded-full bg-emerald-500/60 motion-reduce:animate-none" /> : null}
+      {status === "running" ? <span className="absolute inset-0 animate-ping rounded-full bg-sky-500/60 motion-reduce:animate-none" /> : null}
       <span className={cn("relative size-2 rounded-full transition-colors duration-300", STATUS_DOT[status])} />
     </span>
   );
 }
 
-function ProgressRing({ done, total }: { readonly done: number; readonly total: number }) {
-  const radius = 15;
-  const length = 2 * Math.PI * radius;
-  const ratio = total > 0 ? Math.min(1, done / total) : 0;
+// The round's mood, carried by the app pet. The bloub sleeps while the round
+// waits, gets curious as the first replies land, pays attention when the round
+// is deep in, celebrates a completed round and mopes over a failed one. One
+// live BloubLive per event, carried INLINE, not via <img>: the dark mode
+// inside the SVG listens for the app's `.dark`/`.light` classes, which an
+// `<img>` document can never see. A change of mood MORPHS in the engine, so it
+// reads as the pet reacting, not an image swap. Nothing frames it: no progress
+// ring, no disc behind — the drawing floats bare, the way a sticker would.
+
+/** Round status to pet paint: one color + one face per state. Failed rounds
+ *  run red and angry, completed ones green and happy, queued ones gray and
+ *  sleepy; a running round stays blue and mirrors whoever holds the floor
+ *  (`writingExpression`), resting attentive between turns. */
+const STATUS_PET: Record<TeamEvent["status"], { color: ColorId; expression: ExpressionId | null }> = {
+  failed: { color: "rouge", expression: "colere" },
+  completed: { color: "vert", expression: "heureux" },
+  queued: { color: "gris", expression: "somnolent" },
+  running: { color: "bleu", expression: null },
+};
+
+/** The round's progress, told by the pet's mood alone: color and face follow
+ *  the status, and every turn change morphs to the new writer's face. */
+function PetProgress({ status, writing = false, writingExpression }: {
+  readonly status: TeamEvent["status"];
+  readonly writing?: boolean;
+  readonly writingExpression?: ExpressionId;
+}) {
+  const reduce = useReducedMotion() ?? false;
+  const paint = STATUS_PET[status];
+  const mood: ExpressionId =
+    paint.expression ?? (writing ? (writingExpression ?? "curieux") : "attentif");
+  // Per-mount namespace: history lists several events with the same mood at
+  // once and `url(#...)` resolves document-wide. BloubLive derives it from
+  // useId; mood changes MORPH in the engine instead of crossfading two SVGs
+  // (no AnimatePresence: a single live instance per event).
   return (
-    <span className="relative grid size-9 shrink-0 place-items-center">
-      <svg viewBox="0 0 36 36" className="absolute inset-0 -rotate-90" aria-hidden="true">
-        <circle cx="18" cy="18" r={radius} fill="none" className="stroke-border" strokeWidth="2" />
-        <circle
-          cx="18" cy="18" r={radius} fill="none" strokeWidth="2" strokeLinecap="round"
-          className={cn("stroke-foreground transition-[stroke-dashoffset,opacity] duration-500 ease-out motion-reduce:transition-none", done === 0 && "opacity-0")}
-          strokeDasharray={length} strokeDashoffset={length * (1 - ratio)}
-        />
-      </svg>
-      <span className="text-xs font-semibold tabular-nums">{done}</span>
+    <span className="relative block size-12 shrink-0">
+      {/* Live, not <img>: the embedded dark mode reads the app's `.dark` /
+          `.light` classes, which an image document never receives. With
+          reduced-motion, a fixed frame on the final face. No pulse: the engine
+          already moves (blink, drift, morphs) — opacity throbbing reads as a
+          glitch next to it. */}
+      <BloubLive
+        expression={mood}
+        shape="nuage"
+        color={paint.color}
+        size={48}
+        still={reduce}
+        className="[&_svg]:block [&_svg]:size-full"
+      />
     </span>
   );
 }
@@ -240,6 +324,69 @@ function TypingDots() {
 /** The dictionary has no plural rules, and one action is the case that reads wrong. */
 function actionCount(t: Translate, count: number): string {
   return count === 1 ? t("agentTeam.actionsOne") : t("agentTeam.actionsTotal", { count });
+}
+
+/** Simulated streaming: the words arrive a few at a time while the avatar is
+ *  marked as "writing", the way a poll delivering the finished reply late would
+ *  draw it. An id change remounts this (the caller keys it by message id), so
+ *  the effect never has to reset state — it only drives the interval forward,
+ *  and a real stream appending to the text just keeps typing. */
+function LiveText({ text, streaming, toneClass, reduce }: {
+  readonly text: string;
+  readonly streaming: boolean;
+  readonly toneClass: string;
+  readonly reduce: boolean;
+}) {
+  // Typed-up-to position. A reply mounted already settled (history, reduced
+  // motion) starts at full length and never animates.
+  const [chars, setChars] = useState(() => (streaming && !reduce && text ? 0 : text.length));
+
+  useEffect(() => {
+    if (!streaming || reduce || !text) return undefined;
+    let hold: ReturnType<typeof setTimeout> | null = null;
+    const timer = setInterval(() => {
+      // Tab in the background: the typing waits. Hidden tabs throttle
+      // timers anyway; this also stops a burst of catch-up ticks from
+      // emptying the whole line the moment the tab comes back.
+      if (document.hidden) return;
+      setChars((current) => {
+        if (current > text.length) return current;
+        const step = 2 + Math.floor(Math.random() * 3); // 2–4 characters per beat
+        const next = Math.min(text.length, current + step);
+        if (next >= text.length && !hold) {
+          // One blink's worth of a finished line before the caret dims to
+          // "this speaker is done, the next one is winding up".
+          hold = setTimeout(() => setChars(text.length + 1), 1200);
+        }
+        return next;
+      });
+    }, 48);
+    return () => { clearInterval(timer); if (hold) clearTimeout(hold); };
+  }, [text, streaming, reduce]);
+
+  // Done derives from props, not from another effect: when the round moves on
+  // (`streaming` flips false) the line settles instantly, no state write.
+  const done = !streaming || chars > text.length;
+  // The caret is a small block that follows the words like a real cursor while
+  // they land, then blinks in the agent's colour at the end of the line until
+  // the next reply takes over the round. It reads "this line is live".
+  return (
+    <p className="mt-1.5 max-w-2xl whitespace-pre-wrap break-words text-[15px] leading-relaxed text-foreground">
+      {done ? text : text.slice(0, chars)}
+      {streaming ? (
+        <span
+          aria-hidden="true"
+          className={cn(
+            "ml-1 inline-block h-[1.05em] w-[0.55ch] translate-y-[0.18em] rounded-[2px] align-baseline",
+            toneClass,
+            "animate-[team-caret_1.1s_steps(2,jump-none)_infinite]",
+            done ? "opacity-35" : "opacity-60",
+            "motion-reduce:animate-none",
+          )}
+        />
+      ) : null}
+    </p>
+  );
 }
 
 function ActionList({ actions, item }: { readonly actions: readonly TeamAction[]; readonly item: Variants }) {
@@ -263,25 +410,29 @@ function ActionList({ actions, item }: { readonly actions: readonly TeamAction[]
               key={`${action.type}-${action.targetId}-${index}`}
               variants={item}
               className={cn(
-                "flex items-start gap-2.5 rounded-lg border px-2.5 py-2 text-[13px] leading-snug",
-                ok ? "border-emerald-500/20 bg-emerald-500/5 dark:border-emerald-400/20 dark:bg-emerald-400/5" : "border-border bg-muted/30",
+                "flex items-start gap-2.5 rounded-xl border px-3 py-2 text-[13px] leading-snug",
+                ok
+                  ? "border-border/70 border-l-emerald-500 bg-card shadow-[var(--shadow-inset)]"
+                  : "border-dashed border-border bg-muted/30",
               )}
             >
               <span
                 aria-hidden="true"
                 className={cn(
-                  "mt-px grid size-4 shrink-0 place-items-center rounded-full",
-                  ok ? "bg-emerald-500 text-white dark:bg-emerald-400 dark:text-emerald-950" : "bg-muted-foreground/15 text-muted-foreground",
+                  "mt-px grid size-5 shrink-0 place-items-center rounded-full ring-1",
+                  ok
+                    ? "bg-emerald-500/10 text-emerald-600 ring-emerald-500/30 dark:text-emerald-400 dark:ring-emerald-400/30"
+                    : "bg-muted-foreground/10 text-muted-foreground ring-border",
                 )}
               >
-                <HugeiconsIcon icon={ok ? Tick02Icon : Cancel01Icon} size={10} strokeWidth={2.5} />
+                <HugeiconsIcon icon={ok ? Tick02Icon : Cancel01Icon} size={11} strokeWidth={2.25} />
               </span>
               <span className="min-w-0 break-words">
-                <span className={ok ? "text-foreground" : "text-muted-foreground"}>{actionText(t, action)}</span>
+                <span className={ok ? "font-medium text-foreground" : "text-muted-foreground"}>{actionText(t, action)}</span>
                 {!ok && action.reason ? (
                   <span className="text-muted-foreground"> · {t("agentTeam.skipped")}: {t(`agentTeam.skip.${action.reason}`)}</span>
                 ) : null}
-                {note ? <span className="mt-0.5 line-clamp-2 block text-muted-foreground">“{action.value}”</span> : null}
+                {note ? <span className="mt-1 block border-l-2 border-emerald-500/40 pl-2 text-muted-foreground italic line-clamp-2">“{action.value}”</span> : null}
               </span>
             </motion.li>
           );
@@ -291,19 +442,33 @@ function ActionList({ actions, item }: { readonly actions: readonly TeamAction[]
   );
 }
 
-function Thread({ event, team, agents }: { readonly event: TeamEvent; readonly team: TeamState; readonly agents: readonly FeedAgent[] }) {
+function Thread({ event, team, agents, fill = false }: { readonly event: TeamEvent; readonly team: TeamState; readonly agents: readonly FeedAgent[]; readonly fill?: boolean }) {
   const { t, locale } = useI18n();
   const reduce = useReducedMotion() ?? false;
-  const { entry, item } = threadVariants(reduce);
+  const { entry, item, line } = threadVariants(reduce);
   const { expected, pending } = roundPeople(event, team);
   const people = expected.map((id) => persona(agents, id, event.messages.find((m) => m.agentId === id)?.agentName));
   const acted = doneActions(event);
+  // The one reply that is still being written. The round hands its turn to a
+  // pending agent the moment it starts; the last message on the thread is the
+  // one being typed into. Only a live round streams — replaying history should
+  // not re-run a conversation that already happened.
+  const live = event.status === "running" || event.status === "queued";
+  const lastMessage = event.messages.at(-1);
+  const writerId = pending[0];
+  // The round pet wears the current writer's face, so every turn change
+  // reads as a mood change (morph, not a swap).
+  const writer = writerId === undefined ? undefined : persona(agents, writerId);
+  const writerExpression = writer === undefined ? undefined : petIdentity(writer.id, writer.tone).expression;
 
   return (
     <div className="flex min-w-0 flex-col">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3.5 sm:px-8">
+      <header className={cn(
+        "flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3.5 sm:px-8",
+        fill && "sticky top-0 z-10 bg-background/95 backdrop-blur-sm",
+      )}>
         <div className="flex items-center gap-3">
-          <ProgressRing done={event.messages.length} total={expected.length} />
+          <PetProgress status={event.status} writing={live && writerId !== undefined} writingExpression={writerExpression} />
           <div className="leading-tight">
             <p className="flex items-center gap-2 text-sm font-medium">
               <StatusDot status={event.status} />
@@ -354,15 +519,37 @@ function Thread({ event, team, agents }: { readonly event: TeamEvent; readonly t
         ) : null}
 
         {/* popLayout takes a leaving row out of flow at once, so the "writing"
-            line and the reply that replaces it never stack for a frame. */}
+            line and the reply that replaces it never stack for a frame.
+            Replies use the `line` variant so one arriving as the writing row
+            leaves starts late enough to land after the fade-out — the beat of
+            turn-taking. The reply in flight streams live via LiveText. */}
         <AnimatePresence initial={false} mode="popLayout">
           {event.messages.map((message) => {
             const who = persona(agents, message.agentId, message.agentName);
+            // Only the thread's last message streams, and only while the round
+            // is live and that agent still holds the floor (its pending row
+            // exists). Earlier replies are settled history: a growing list that
+            // re-types old text would replay a conversation already read.
+            const streaming = live && message === lastMessage && who.id === writerId;
             return (
-              <motion.li key={message.id} layout="position" variants={entry} initial="hidden" animate="show" exit="exit">
+              <motion.li
+                key={message.id}
+                layout="position"
+                variants={streaming ? line : entry}
+                initial="hidden"
+                animate="show"
+                exit="exit"
+              >
                 <article>
                   <motion.header variants={item} className="flex items-center gap-2">
-                    <Avatar who={who} size="xs" />
+                    <Avatar
+                      who={who}
+                      size="xs"
+                      expression={streaming ? "attentif" : undefined}
+                      live={streaming}
+                      avatarClass={streaming ? "rounded-full ring-1 ring-current/60" : undefined}
+                      className={streaming ? TONES[who.tone].text : undefined}
+                    />
                     <h3 className={LABEL}>
                       {t("agentTeam.messageFrom")} <span className={TONES[who.tone].text}>{who.name}</span>
                     </h3>
@@ -370,9 +557,19 @@ function Thread({ event, team, agents }: { readonly event: TeamEvent; readonly t
                       {new Date(message.at).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}
                     </time>
                   </motion.header>
-                  <motion.p variants={item} className="mt-1.5 max-w-2xl whitespace-pre-wrap break-words text-[15px] leading-relaxed text-foreground">
-                    {message.text}
-                  </motion.p>
+                  {streaming ? (
+                    <LiveText
+                      key={message.id}
+                      text={message.text}
+                      streaming={streaming}
+                      toneClass={TONES[who.tone].text}
+                      reduce={reduce}
+                    />
+                  ) : (
+                    <motion.p variants={item} className="mt-1.5 max-w-2xl whitespace-pre-wrap break-words text-[15px] leading-relaxed text-foreground">
+                      {message.text}
+                    </motion.p>
+                  )}
                   {message.actions?.length ? <ActionList actions={message.actions} item={item} /> : null}
                 </article>
               </motion.li>
@@ -381,18 +578,18 @@ function Thread({ event, team, agents }: { readonly event: TeamEvent; readonly t
 
           {pending.map((id, index) => {
             const who = persona(agents, id);
-            const writing = event.status === "running" && index === 0;
+            const writing = (event.status === "running" || event.status === "queued") && index === 0;
             return (
               <motion.li
                 key={`pending-${id}`}
                 layout="position"
-                variants={entry}
+                variants={writing ? line : entry}
                 initial="hidden"
                 animate="show"
                 exit="exit"
                 className={cn("flex items-center gap-2 transition-opacity duration-300", !writing && "opacity-60")}
               >
-                <Avatar who={who} size="xs" />
+                <Avatar who={who} size="xs" expression={writing ? "attentif" : undefined} live={writing} avatarClass={writing ? "rounded-full ring-1 ring-current/60" : undefined} className={writing ? TONES[who.tone].text : undefined} />
                 <span className={cn(LABEL, "flex items-center gap-2 transition-colors duration-300", writing && TONES[who.tone].text)}>
                   {writing ? t("agentTeam.typing", { name: who.name }) : t("agentTeam.pendingAgent", { name: who.name })}
                   {writing ? <TypingDots /> : null}
@@ -429,14 +626,21 @@ function Thread({ event, team, agents }: { readonly event: TeamEvent; readonly t
 }
 
 /** `team.events` arrives newest first (see app/api/team/route.ts). */
-export function TeamFeed({ team, agents }: { readonly team: TeamState; readonly agents: readonly FeedAgent[] }) {
+export function TeamFeed({ team, agents, fill = false }: { readonly team: TeamState; readonly agents: readonly FeedAgent[]; readonly fill?: boolean }) {
   const { t, locale } = useI18n();
   const reduce = useReducedMotion() ?? false;
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   if (!team.events.length) {
     return (
-      <p className="content-enter rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+      <p
+        className={cn(
+          "content-enter text-center text-sm text-muted-foreground",
+          fill
+            ? "flex min-h-0 flex-1 items-center justify-center p-8"
+            : "rounded-2xl border border-dashed border-border p-8",
+        )}
+      >
         {t("agentTeam.empty")}
       </p>
     );
@@ -449,10 +653,25 @@ export function TeamFeed({ team, agents }: { readonly team: TeamState; readonly 
   const members = team.agentIds.map((id) => persona(agents, id));
 
   return (
-    <div className="content-enter grid overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--shadow-soft)] md:grid-cols-[18rem_minmax(0,1fr)]">
-      <aside className="flex min-w-0 flex-col border-b border-border bg-muted/30 md:border-r md:border-b-0">
+    <div
+      className={cn(
+        "content-enter grid overflow-hidden md:grid-cols-[18rem_minmax(0,1fr)]",
+        // /working (`fill`) sits edge to edge under the shell, the way
+        // /calendar does — hairlines only, no floating card. The /runtime
+        // team tab keeps the card: its page is a padded column.
+        fill
+          ? "h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)]"
+          : "rounded-2xl border border-border bg-card shadow-[var(--shadow-soft)]",
+      )}
+    >
+      <aside
+        className={cn(
+          "flex min-h-0 min-w-0 flex-col border-b border-border bg-muted/30 md:border-r md:border-b-0",
+          fill && "max-h-[45dvh] md:max-h-none",
+        )}
+      >
         {members.length > 0 ? (
-          <div className="p-4">
+          <div className={cn("shrink-0 p-4", fill && "scroll-hover max-h-[45dvh] overflow-y-auto")}>
             <p className={LABEL}>{t("agentTeam.members")}</p>
             <ul className="mt-3 grid grid-cols-3 gap-1.5">
               {members.map((who) => {
@@ -466,17 +685,17 @@ export function TeamFeed({ team, agents }: { readonly team: TeamState; readonly 
                     )}
                   >
                     <span className="relative">
-                      <Avatar who={who} size="lg" />
+                      <Avatar who={who} size="lg" expression={isSpeaking ? "attentif" : undefined} live={isSpeaking} />
                       <AnimatePresence initial={false}>
                         {isSpeaking ? (
-                          <motion.span
-                            key="speaking"
-                            initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.4 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.4 }}
-                            transition={{ duration: 0.2, ease: EASE_OUT }}
-                            className="absolute -right-0.5 -bottom-0.5 size-3 rounded-full border-2 border-card bg-emerald-500"
-                          />
+                            <motion.span
+                              key="speaking"
+                              initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.4 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.4 }}
+                              transition={{ duration: 0.2, ease: EASE_OUT }}
+                              className="absolute right-[10%] bottom-[10%] size-3 rounded-full border-2 border-card bg-emerald-500"
+                            />
                         ) : null}
                       </AnimatePresence>
                     </span>
@@ -491,11 +710,20 @@ export function TeamFeed({ team, agents }: { readonly team: TeamState; readonly 
           </div>
         ) : null}
 
-        <nav aria-label={t("agentTeam.rounds")} className="border-t border-border px-2 py-3 first:border-t-0">
+        <nav
+          aria-label={t("agentTeam.rounds")}
+          className={cn(
+            "border-t border-border px-2 py-3 first:border-t-0",
+            // flex-col so the rounds list is a flex item: it grows to take
+            // the space left over after Integrantes y la memoria, and scrolls
+            // inside itself once the rounds outgrow it — nothing gets clipped.
+            fill && "flex min-h-0 flex-1 flex-col",
+          )}
+        >
           <p className={cn(LABEL, "px-2")}>
             {t("agentTeam.rounds")} <span className="tabular-nums">· {team.events.length}</span>
           </p>
-          <ul className="relative mt-2 max-h-80 space-y-0.5 overflow-y-auto md:max-h-[30rem]">
+          <ul className={cn("scroll-hover relative mt-2 space-y-0.5 overflow-y-auto", fill ? "min-h-0 flex-1" : "max-h-80 md:max-h-[30rem]")}>
             <AnimatePresence initial={false}>
               {team.events.map((event) => {
                 const first = event.changes[0];
@@ -533,7 +761,7 @@ export function TeamFeed({ team, agents }: { readonly team: TeamState; readonly 
                     >
                       <span className="relative mt-0.5">
                         <Avatar who={lead} size="sm" />
-                        <span className="absolute -right-0.5 -bottom-0.5 grid size-3 place-items-center rounded-full bg-card">
+                        <span className="absolute right-[10%] bottom-[10%] grid size-3 place-items-center rounded-full bg-card">
                           <StatusDot status={event.status} />
                         </span>
                       </span>
@@ -562,15 +790,15 @@ export function TeamFeed({ team, agents }: { readonly team: TeamState; readonly 
         </nav>
 
         {team.memory.length > 0 ? (
-          <div className="border-t border-border p-4">
+          <div className={cn("shrink-0 border-t border-border p-4", fill && "scroll-hover max-h-[30dvh] overflow-y-auto")}>
             <p className={cn(LABEL, "flex items-center gap-1.5")}>
               <HugeiconsIcon icon={Brain02Icon} size={12} strokeWidth={1.75} />
               {t("agentTeam.memory")}
             </p>
             <ul className="mt-3 space-y-2.5">
-              {team.memory.map((entry) => (
-                <li key={entry.agentId} className="flex gap-2">
-                  <Avatar who={persona(agents, entry.agentId)} size="xs" className="mt-0.5" />
+              {team.memory.map((entry, index) => (
+                <li key={`${entry.agentId}-${index}`} className="flex gap-2">
+                  <Avatar who={persona(agents, entry.agentId)} size="xs" className="mt-0.5 self-start" />
                   <p className="line-clamp-3 text-xs leading-relaxed text-muted-foreground">{entry.text}</p>
                 </li>
               ))}
@@ -579,7 +807,10 @@ export function TeamFeed({ team, agents }: { readonly team: TeamState; readonly 
         ) : null}
       </aside>
 
-      <section aria-label={t("agentTeam.feed")} className="min-w-0 md:min-h-[32rem]">
+      <section
+        aria-label={t("agentTeam.feed")}
+        className={cn("min-w-0", fill ? "scroll-hover min-h-0 overflow-y-auto" : "md:min-h-[32rem]")}
+      >
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={selected.id}
@@ -588,7 +819,7 @@ export function TeamFeed({ team, agents }: { readonly team: TeamState; readonly 
             exit={{ opacity: 0 }}
             transition={{ duration: 0.14, ease: EASE_OUT }}
           >
-            <Thread event={selected} team={team} agents={agents} />
+            <Thread event={selected} team={team} agents={agents} fill={fill} />
           </motion.div>
         </AnimatePresence>
       </section>

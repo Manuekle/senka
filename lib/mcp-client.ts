@@ -1,3 +1,6 @@
+import { lookup } from "node:dns/promises";
+import { isPrivateAddress } from "./web-page";
+import { validateMcpUrl } from "./mcp-url";
 import type { McpServer } from "./types";
 
 // A small MCP client, spoken over Streamable HTTP.
@@ -119,6 +122,29 @@ type Rpc = {
   readonly sessionId: () => string | undefined;
 };
 
+/**
+ * Where this server's requests may actually go, checked per call.
+ *
+ * validateMcpUrl rules the URL in by host *name*; this resolves the name and
+ * refuses when it answers with a private or loopback address, so a public
+ * domain pointed at 10.0.0.1 does not slip through — and because it runs per
+ * call, a DNS answer that changes between calls is caught too. The plaintext
+ * loopback case skips the address check by agreement: localhost was the
+ * operator's explicit choice when they typed it.
+ */
+async function assertAllowedDestination(url: string): Promise<void> {
+  const validated = validateMcpUrl(url);
+  if ("error" in validated) throw new McpError("La URL del servidor MCP ya no es válida.");
+  const target = new URL(validated.url);
+  if (target.protocol === "http:") return; // loopback-only by validateMcpUrl
+  const addresses = await lookup(target.hostname, { all: true, verbatim: true }).catch(() => {
+    throw new McpError(`No pude resolver ${target.hostname}.`);
+  });
+  if (addresses.some((entry) => isPrivateAddress(entry.address))) {
+    throw new McpError(`${target.hostname} apunta a una dirección privada.`);
+  }
+}
+
 function rpcFor(server: McpServerConfig, timeoutMs: number): Rpc {
   let nextId = 1;
   let sessionId: string | undefined;
@@ -127,11 +153,15 @@ function rpcFor(server: McpServerConfig, timeoutMs: number): Rpc {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
+      await assertAllowedDestination(server.url);
       return await fetch(server.url, {
         method: "POST",
         headers: headersFor(server, sessionId),
         body: JSON.stringify(body),
         signal: controller.signal,
+        // Never chase a redirect blindly: each hop would have to pass the
+        // same destination checks, and fetch would follow it on its own.
+        redirect: "error",
       });
     } catch (error) {
       if ((error as Error)?.name === "AbortError") {

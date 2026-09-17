@@ -1,6 +1,7 @@
 "use client";
 
 import { type FormEvent, useCallback, useEffect, useState } from "react";
+import Image from "next/image";
 import { HugeiconsIcon } from "@/components/icons/icon";
 import {
   ArrowDown01Icon,
@@ -150,10 +151,11 @@ export function BusinessSwitcher({ collapsed = false, className }: { readonly co
       )}
     >
       {active?.logoUpdatedAt ? (
-        /* eslint-disable-next-line @next/next/no-img-element -- served by API route */
-        <img
+        <Image
           src={`/api/businesses/${encodeURIComponent(active.id)}/logo?v=${encodeURIComponent(active.logoUpdatedAt)}`}
           alt={activeName}
+          width={40}
+          height={40}
           className="size-5 shrink-0 rounded-md border border-border bg-card object-contain p-px"
         />
       ) : (
@@ -207,10 +209,11 @@ export function BusinessSwitcher({ collapsed = false, className }: { readonly co
               >
                 <span className="flex w-full items-center gap-2.5">
                   {business.logoUpdatedAt ? (
-                    /* eslint-disable-next-line @next/next/no-img-element -- served by API route */
-                    <img
+                    <Image
                       src={`/api/businesses/${encodeURIComponent(business.id)}/logo?v=${encodeURIComponent(business.logoUpdatedAt)}`}
                       alt={business.name || t("business.unnamed")}
+                      width={48}
+                      height={48}
                       className="size-6 shrink-0 rounded-md border border-border bg-card object-contain p-px"
                     />
                   ) : (

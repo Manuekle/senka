@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@/components/icons/icon";
-import { ArrowLeft02Icon, Award05Icon, CrownIcon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, Award05Icon, CrownIcon } from "@hugeicons/core-free-icons";
 import { Halo, LightBar } from "@/app/landing/_components/lighting";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/lib/i18n/provider";
@@ -148,10 +148,10 @@ export function EnterpriseGate({ children }: { readonly children: React.ReactNod
                 style={{ fontFamily: "var(--font-sans)" }}
               >
                 <HugeiconsIcon
-                  icon={ArrowLeft02Icon}
+                  icon={ArrowLeft01Icon}
                   size={14}
                   strokeWidth={1.75}
-                  className="transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-x-0.5"
+                  className="transition-transform duration-200 ease-expo-out group-hover:-translate-x-0.5"
                 />
                 {t("gate.back")}
               </button>

@@ -15,7 +15,7 @@ import {
 import { HugeiconsIcon } from "@/components/icons/icon";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Call02Icon, BubbleChatIcon,NotificationBubbleIcon, Clock01Icon, CheckmarkCircle02Icon, Delete01Icon, ArrowRight02Icon } from "@hugeicons/core-free-icons";
+import { Call02Icon, BubbleChatIcon,NotificationBubbleIcon, Clock01Icon, CheckmarkCircle02Icon, Delete01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { useI18n } from "@/lib/i18n/provider";
 import { relativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -612,7 +612,7 @@ const ContactCard = memo(function ContactCard({
                   </SelectContent>
                 </Select>
                 <Button type="button" variant="ghost" size="icon-xs" disabled={overlay || moving} aria-label={locale === "es" ? `Abrir ${contact.name}` : `Open ${contact.name}`} onClick={() => onEdit(contact)} onPointerDown={(event) => event.stopPropagation()} className="text-muted-foreground hover:bg-accent/70 hover:text-foreground" style={{ width: q(28), height: q(28) }}>
-                  <HugeiconsIcon icon={ArrowRight02Icon} size={q(13)} strokeWidth={1.75} />
+                  <HugeiconsIcon icon={ArrowRight01Icon} size={q(13)} strokeWidth={1.75} />
                 </Button>
                 <Button type="button" variant="ghost" size="icon-xs" disabled={overlay || moving} aria-label={t("crm.delete")} onClick={() => onDelete(contact.id)} onPointerDown={(event) => event.stopPropagation()} className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive" style={{ width: q(28), height: q(28) }}>
                   <HugeiconsIcon icon={Delete01Icon} size={q(13)} strokeWidth={1.75} />
@@ -715,7 +715,7 @@ const ContactCard = memo(function ContactCard({
                 className="shrink-0 text-muted-foreground hover:bg-accent/70 hover:text-foreground"
                 style={{ width: q(28), height: q(28) }}
               >
-                <HugeiconsIcon icon={ArrowRight02Icon} size={q(13)} strokeWidth={1.75} />
+                <HugeiconsIcon icon={ArrowRight01Icon} size={q(13)} strokeWidth={1.75} />
               </Button>
               <Button
                 type="button" variant="ghost" size="icon-xs"

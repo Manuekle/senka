@@ -351,7 +351,7 @@ export function AvatarCropDialog({ file, onConfirm, onCancel }: Props) {
                     // Origen = centro del elemento: la foto gira sobre sí
                     // misma sin desplazarse (igual que en el export).
                     transformOrigin: "50% 50%",
-                    transition: "transform 320ms cubic-bezier(0.22, 1, 0.36, 1)",
+                    transition: "transform 320ms var(--ease-smooth-out)",
                     opacity: loaded ? 1 : 0,
                   }}
                 />
