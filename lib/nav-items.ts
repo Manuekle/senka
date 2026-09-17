@@ -22,6 +22,7 @@ import {
   SmartPhone01Icon,
   GlobalEducationIcon,
   BulbChargingIcon,
+  HelpCircleIcon,
 } from "@hugeicons/core-free-icons";
 
 export type NavItem = {
@@ -103,6 +104,8 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       { href: "/runtime", labelKey: "nav.runtime", icon: BulbChargingIcon },
       { href: "/settings", labelKey: "nav.settings", icon: Settings01Icon },
       { href: "/setup", labelKey: "nav.setup", icon: FilterHorizontalIcon },
+      // Last: where you go when the rest of the list did not answer it.
+      { href: "/help", labelKey: "nav.help", icon: HelpCircleIcon },
     ],
   },
 ];

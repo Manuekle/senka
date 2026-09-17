@@ -6,9 +6,10 @@ export default defineDynamic({
     "session.started": (_event, ctx) =>
       operatorSkill(
         ctx.channel.kind,
-        "Use when the owner asks about their website: whether it works as a sales page, " +
-          "why nobody finds them on Google, what to write on the home page, or which " +
-          "search terms they should be showing up for.",
+        "Use when the owner asks about their website or its SEO: an SEO audit or report, " +
+          "Google rankings and organic traffic (Search Console), whether the site works as " +
+          "a sales page, why nobody finds them on Google, what to write on the home page, " +
+          "or which search terms they should be showing up for.",
         `# The website
 
 Two jobs that share one read of the page:
@@ -35,6 +36,18 @@ web_fetch the site. Then search_knowledge for what the business actually sells
 and at what price, because the most common finding is that the page does not
 say the thing the business is best at.
 
+Any public site can be read this way — the owner's own or someone else's.
+Search Console numbers are different: \`seo\` only reads properties the
+connected Google account has in Search Console. If the site asked about is not
+in \`seo action=sites\`, do everything else and say in one line that its
+traffic data needs that site's owner to connect their Google account in
+Conexiones. Do not stop to ask how they want to proceed — start with what you
+can read.
+
+For an "informe" or "reporte", finish with \`report\` (headline figures from
+\`seo\`, a section per finding, and the change list), plus a \`chart\` of
+clicks over time when you have \`dailyClicks\`.
+
 If there is no site, say so and stop the page half. For a business selling on
 WhatsApp and Instagram, no site is a valid choice and a bad site is worse than
 none.
@@ -60,25 +73,37 @@ the customer's own words for the headline.
 
 ## search
 
-1. **What the site says now.** From the fetch: title, headings, the words that
-   actually appear.
-2. **What customers actually type.** inbox and the archive are better than any
+1. **What the site says now.** From the fetch: title, meta description, H1/H2,
+   canonical, indexability (robots), structured data, images without alt, and
+   the words that actually appear. web_fetch also reads /robots.txt and
+   /sitemap.xml — check both.
+2. **What Google already shows it for.** When Google is connected, the \`seo\`
+   tool is the real answer: \`overview\` for clicks, impressions, CTR and
+   position against the previous window, \`queries\` for the keywords (and
+   which grew, dropped or vanished), \`pages\` for the URLs. Terms with many
+   impressions and a position between 5 and 20 are the cheapest wins. If \`seo\`
+   says Google is not connected, say it is one click in Conexiones and keep
+   going with the rest — never ask to be invited by email.
+3. **What customers actually type.** inbox and the archive are better than any
    keyword tool here, because they are real people asking for this exact
-   service in this exact place. Add web_search to see who currently ranks for
-   those.
-3. **Group them by intent**, and be honest about which is worth chasing:
+   service in this exact place. There is no web search on this install, so
+   who currently ranks for a term is not something you can check — say so
+   instead of guessing.
+4. **Group them by intent**, and be honest about which is worth chasing:
    - **Ready to buy** — "[servicio] en [ciudad]", "precio de [servicio]".
      Few searches, almost all of them worth money. Chase these.
    - **Comparing** — "cuál es mejor", "vale la pena".
    - **Learning** — "cómo se hace". Most volume, least money. A small business
      should usually ignore these.
-4. **Report at most five terms**, each with: who ranks now, what page this
-   business would need, and whether it is realistically winnable. Saying "no
+5. **Report at most five terms**, each with: its numbers from \`seo\` when you
+   have them, what page this business would need, and whether it is
+   realistically winnable. Saying "no
    vas a ganar esta" about a term owned by three national companies is worth
    more than a plan to try.
-5. **Say the local thing.** For a business serving one area, the map listing
+6. **Say the local thing.** For a business serving one area, the map listing
    and the reviews on it usually move more than anything on the site. If the
-   business has one, say so; check it with web_search rather than assuming.
+   business has one, say so; ask for the Maps link and web_fetch it rather
+   than assuming.
 
 ## Rules
 

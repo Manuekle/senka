@@ -49,10 +49,12 @@ and why.
 
 1. **Confirm the segment and the count.** If either is missing, ask for the
    missing one only. Default to 15 if a count is genuinely not implied.
-2. **Search.** web_search for the segment plus the location plus the trigger
-   worth targeting (hiring, opening, expanding, complaining publicly about the
-   problem this business solves). Then web_fetch the promising results to
-   confirm the business is real, still operating, and actually in the segment.
+2. **Source.** There is no web search on this install, so candidates come from
+   a list the owner points to: a directory or chamber-of-commerce page, a Maps
+   search link, an association's member list, an event's exhibitor page. Ask
+   for one such link if none was given (one question). web_fetch it, then
+   web_fetch each promising candidate's own site to confirm the business is
+   real, still operating, and actually in the segment.
 3. **Score each candidate** against the profile from above. Keep only:
    - **good** — matches the profile and shows a reason to talk now.
    - **maybe** — matches the profile, no timing signal.

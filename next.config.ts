@@ -7,6 +7,16 @@ const nextConfig: NextConfig = {
   // start` and the existing systemd path still work unchanged, this only
   // adds the extra output alongside the normal build.
   output: "standalone",
+  experimental: {
+    // `/eve/*` reaches the agent through a rewrite (see `withEve` below), and
+    // Next proxies rewrites with a 30-second socket timeout. An agent step
+    // that writes a long tool call — a `report` is a couple of thousand tokens
+    // of JSON — emits nothing on the session stream for longer than that, so
+    // the proxy cut the chat's stream mid-turn: the browser showed
+    // "network error" while the turn finished fine on the server. Ten minutes
+    // outlasts any single step; the stream still ends as soon as the turn does.
+    proxyTimeout: 10 * 60 * 1000,
+  },
   /**
    * The PDF export reads its fonts off disk.
    *

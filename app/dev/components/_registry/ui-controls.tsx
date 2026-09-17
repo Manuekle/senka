@@ -29,6 +29,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { LiquidSlider } from "@/components/ui/liquid-slider";
 import { Separator } from "@/components/ui/separator";
+import { GaugeMeter } from "@/components/ui/gauge-meter";
+import { ScoreGauge } from "@/components/ui/score-gauge";
+import { ScoreRing } from "@/components/ui/score-ring";
 import { Spinner } from "@/components/ui/spinner";
 import { StatusBadge, type StatusVariant } from "@/components/ui/status-badge";
 import { SuggestionChip } from "@/components/ui/suggestion-chip";
@@ -117,6 +120,68 @@ function SliderDemo() {
         <span className="font-mono tabular-nums">{value.toFixed(2)}</span>
       </div>
       <LiquidSlider value={value} onValueChange={setValue} label="Temperatura" />
+    </div>
+  );
+}
+
+function ScoreGaugeLiveDemo() {
+  const [value, setValue] = useState(79);
+  return (
+    <div className="flex w-full flex-col items-center gap-4">
+      <ScoreGauge value={value} size="md" />
+      <div className="flex flex-wrap justify-center gap-1.5">
+        {[25, 54, 79, 96].map((option) => (
+          <ToggleChip
+            key={option}
+            selected={value === option}
+            onClick={() => setValue(option)}
+          >
+            {option}
+          </ToggleChip>
+        ))}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setValue(Math.round(Math.random() * 100))}
+        >
+          Aleatorio
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function ScoreRingLiveDemo() {
+  const [value, setValue] = useState(8.2);
+  return (
+    <div className="flex w-full flex-col items-center gap-4">
+      <ScoreRing value={value} size="md" />
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => setValue(Math.round(Math.random() * 100) / 10)}
+      >
+        Aleatorio
+      </Button>
+    </div>
+  );
+}
+
+function GaugeMeterLiveDemo() {
+  const [value, setValue] = useState(64);
+  return (
+    <div className="flex w-full flex-col items-center gap-4">
+      <GaugeMeter value={value} size="md" showValue />
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => setValue(Math.round(Math.random() * 100))}
+      >
+        Aleatorio
+      </Button>
     </div>
   );
 }
@@ -766,6 +831,220 @@ export function uiControls(_locale?: string): Section {
               </div>
             </div>
           ),
+        },
+      ],
+    },
+    {
+      id: "score-ring",
+      name: "ScoreRing",
+      source: "components/ui/score-ring.tsx",
+      importLine: 'import { ScoreRing } from "@/components/ui/score-ring";',
+      desc: "Anillo de puntuación en SVG de un solo tono (0–40 rojo, 40–80 amarillo, 80–100 verde; o pásalo con tone) y extremos redondeados. Nítido a cualquier tamaño.",
+      exports: ["ScoreRing"],
+      props: [
+        { name: "value", type: "number", required: true, desc: "Puntuación actual. Ej: 8.2 con max 10 llena 82% del anillo." },
+        { name: "max", type: "number", def: "10", desc: "Puntuación máxima posible." },
+        { name: "size", type: '"xs" | "sm" | "md" | "lg" | "xl"', def: '"md"', desc: "48 / 64 / 88 / 120 / 160 px." },
+        { name: "dimension", type: "number", desc: "Diámetro propio en px. Pisa a size." },
+        { name: "tone", type: "string", desc: "Color propio del trazo. Sin pasar, sale del valor." },
+        { name: "label", type: "string", desc: "Etiqueta propia. Si no se pasa, muestra value." },
+        { name: "decimals", type: "number", desc: "Sin pasar: entero muestra «8», decimal redondea a 1 («8.2»). Con valor, fuerza esos decimales." },
+      ],
+      notes: [
+        "Es role=\"progressbar\" con aria-valuemin/max/now: el lector anuncia «Score X out of Y».",
+        "Anima con motion (tween 650ms, dibuja desde 0 al montar) y número con ActionSwapText. Estático con prefers-reduced-motion.",
+      ],
+      demos: [
+        {
+          id: "score-ring-sizes",
+          title: "Tamaños",
+          code: `<ScoreRing value={8.2} size="xs" />
+<ScoreRing value={8.2} size="sm" />
+<ScoreRing value={8.2} size="md" />
+<ScoreRing value={8.2} size="lg" />
+<ScoreRing value={8.2} size="xl" />`,
+          render: (
+            <div className="flex flex-wrap items-center gap-8">
+              <ScoreRing value={8.2} size="xs" />
+              <ScoreRing value={8.2} size="sm" />
+              <ScoreRing value={8.2} size="md" />
+              <ScoreRing value={8.2} size="lg" />
+              <ScoreRing value={8.2} size="xl" />
+            </div>
+          ),
+        },
+        {
+          id: "score-ring-numbers",
+          title: "Entero y decimal",
+          desc: "Sin decimals: el entero sale limpio («8») y el decimal redondea a 1 («8.2»). Pasa decimals para forzarlo.",
+          code: `<ScoreRing value={8} />
+<ScoreRing value={8.2} />
+<ScoreRing value={8} decimals={1} />`,
+          render: (
+            <div className="flex flex-wrap items-center gap-6">
+              <ScoreRing value={8} />
+              <ScoreRing value={8.2} />
+              <ScoreRing value={8} decimals={1} />
+            </div>
+          ),
+        },
+        {
+          id: "score-ring-values",
+          title: "Valores y porcentaje",
+          desc: "Misma paleta, distinto arco. También sirve para porcentajes con max={100}.",
+          code: `<ScoreRing value={9.6} />
+<ScoreRing value={6.4} />
+<ScoreRing value={3.1} />
+<ScoreRing value={82} max={100} label="82" />`,
+          render: (
+            <div className="flex flex-wrap items-center gap-6">
+              <ScoreRing value={9.6} />
+              <ScoreRing value={6.4} />
+              <ScoreRing value={3.1} />
+              <ScoreRing value={82} max={100} label="82" />
+            </div>
+          ),
+        },
+        {
+          id: "score-ring-live",
+          title: "Animado",
+          desc: "Pulsa Aleatorio: el anillo hace tween y el número cambia con blur.",
+          code: `const [value, setValue] = useState(8.2);
+
+<ScoreRing value={value} size="md" />
+<Button variant="outline" onClick={() => setValue(Math.round(Math.random() * 100) / 10)}>
+  Aleatorio
+</Button>`,
+          render: <ScoreRingLiveDemo />,
+        },
+      ],
+    },
+    {
+      id: "gauge-meter",
+      name: "GaugeMeter",
+      source: "components/ui/gauge-meter.tsx",
+      importLine: 'import { GaugeMeter } from "@/components/ui/gauge-meter";',
+      desc: "Velocímetro en semicírculo SVG: arco de fondo, arco de valor con gradiente de un solo tono (el mismo color, de translúcido a sólido), aguja y ticks. Es role=\"meter\" con sus valores expuestos a accesibilidad.",
+      exports: ["GaugeMeter"],
+      props: [
+        { name: "value", type: "number", required: true, desc: "Valor actual. Se recorta a 0…max." },
+        { name: "max", type: "number", def: "100", desc: "Valor máximo del arco completo." },
+        { name: "color", type: "string", def: '"#10b981"', desc: "Color del arco, aguja y centro." },
+        { name: "size", type: '"sm" | "md" | "lg"', def: '"sm"', desc: "120 / 150 / 180 px de ancho." },
+        { name: "thickness", type: "number", def: "8", desc: "Grosor del arco." },
+        { name: "showValue", type: "boolean", def: "false", desc: "Muestra el número bajo el arco." },
+        { name: "label", type: "string", desc: "Nombre accesible. Si no se pasa, usa «Gauge value X of Y»." },
+      ],
+      notes: [
+        "Arco y aguja animan juntos con motion (tween 650ms). Estático con prefers-reduced-motion.",
+      ],
+      demos: [
+        {
+          id: "gauge-meter-sizes",
+          title: "Tamaños y colores",
+          code: `<GaugeMeter value={24} max={100} color="#10b981" size="sm" />
+<GaugeMeter value={52} max={100} color="#f59e0b" size="md" />
+<GaugeMeter value={76} max={100} color="#e11d48" size="lg" />`,
+          render: (
+            <div className="flex flex-wrap items-end gap-8">
+              <GaugeMeter value={24} max={100} color="#10b981" size="sm" />
+              <GaugeMeter value={52} max={100} color="#f59e0b" size="md" />
+              <GaugeMeter value={76} max={100} color="#e11d48" size="lg" />
+            </div>
+          ),
+        },
+        {
+          id: "gauge-meter-value",
+          title: "Con valor",
+          code: `<GaugeMeter value={24} showValue />
+<GaugeMeter value={76} color="#e11d48" showValue />`,
+          render: (
+            <div className="flex flex-wrap items-end gap-8">
+              <GaugeMeter value={24} showValue />
+              <GaugeMeter value={76} color="#e11d48" showValue />
+            </div>
+          ),
+        },
+        {
+          id: "gauge-meter-live",
+          title: "Animado",
+          desc: "Pulsa Aleatorio: arco y aguja viajan juntos.",
+          code: `const [value, setValue] = useState(64);
+
+<GaugeMeter value={value} size="md" showValue />
+<Button variant="outline" onClick={() => setValue(Math.round(Math.random() * 100))}>
+  Aleatorio
+</Button>`,
+          render: <GaugeMeterLiveDemo />,
+        },
+      ],
+    },
+    {
+      id: "score-gauge",
+      name: "ScoreGauge",
+      source: "components/ui/score-gauge.tsx",
+      importLine: 'import { ScoreGauge } from "@/components/ui/score-gauge";',
+      desc: "Gauge de score abierto (arco ~260° con la parte inferior libre): fondo tenue, progreso con gradiente rojo → azul, punto final del tono del valor y badge de la colección. No es el ScoreRing (360° cerrado).",
+      exports: ["ScoreGauge"],
+      props: [
+        { name: "value", type: "number", required: true, desc: "Score actual. Se recorta a 0…max." },
+        { name: "max", type: "number", def: "100", desc: "Score máximo." },
+        { name: "size", type: '"sm" | "md" | "lg" | "xl"', def: '"md"', desc: "72 / 100 / 136 / 180 px de ancho." },
+        { name: "label", type: "string", def: '"Sternify Score"', desc: "Texto bajo el score." },
+        { name: "status", type: "string", def: '"To improve"', desc: "Texto del Badge. Vacío lo oculta." },
+        { name: "statusTone", type: '"blue" | "green" | "red" | "purple"', desc: "Tono del Badge. Sin pasar sale del valor: ≥80 verde, ≥60 azul, ≥40 morado, <40 rojo." },
+        { name: "showDot", type: "boolean", def: "true", desc: "Punto al final del progreso." },
+        { name: "decimals", type: "number", desc: "Sin pasar: entero muestra «79», decimal redondea a 1." },
+      ],
+      notes: [
+        "Es role=\"progressbar\": anuncia «label: valor».",
+        "Arco y punto comparten un solo tween (el punto no salta); al 100% el anillo queda completo sin punto. Número con ActionSwapText. Estático con prefers-reduced-motion.",
+      ],
+      demos: [
+        {
+          id: "score-gauge-sizes",
+          title: "Tamaños",
+          code: `<ScoreGauge value={79} size="sm" />
+<ScoreGauge value={79} size="md" />
+<ScoreGauge value={79} size="lg" />
+<ScoreGauge value={79} size="xl" />`,
+          render: (
+            <div className="flex flex-wrap items-end gap-8">
+              <ScoreGauge value={79} size="sm" />
+              <ScoreGauge value={79} size="md" />
+              <ScoreGauge value={79} size="lg" />
+              <ScoreGauge value={79} size="xl" />
+            </div>
+          ),
+        },
+        {
+          id: "score-gauge-labels",
+          title: "Labels y tonos",
+          desc: "Cuatro tonos sobre tu Badge; sin statusTone salen solos del valor.",
+          code: `<ScoreGauge value={96} label="Accessibility" status="Excellent" statusTone="green" size="lg" />
+<ScoreGauge value={82} label="SEO Score" status="Good" statusTone="blue" size="lg" />
+<ScoreGauge value={64} label="Sternify Score" status="Fair" statusTone="purple" size="lg" />
+<ScoreGauge value={34} label="Performance" status="Critical" statusTone="red" size="lg" />`,
+          render: (
+            <div className="flex flex-wrap items-end gap-8">
+              <ScoreGauge value={96} label="Accessibility" status="Excellent" statusTone="green" size="lg" />
+              <ScoreGauge value={82} label="SEO Score" status="Good" statusTone="blue" size="lg" />
+              <ScoreGauge value={64} label="Sternify Score" status="Fair" statusTone="purple" size="lg" />
+              <ScoreGauge value={34} label="Performance" status="Critical" statusTone="red" size="lg" />
+            </div>
+          ),
+        },
+        {
+          id: "score-gauge-live",
+          title: "Animado",
+          desc: "Pulsa un valor o Aleatorio: número, arco, punto y badge animan juntos.",
+          code: `const [value, setValue] = useState(79);
+
+<ScoreGauge value={value} size="md" />
+<Button variant="outline" onClick={() => setValue(Math.round(Math.random() * 100))}>
+  Aleatorio
+</Button>`,
+          render: <ScoreGaugeLiveDemo />,
         },
       ],
     },

@@ -111,7 +111,10 @@ ask ONE short question and wait for it. Best sources, in order:
    policies, catalogue, hours. Look here before asking.
 2. The pipeline itself (pipeline) — how deals actually behave in this account
    beats anyone's description of how they should.
-3. The web (web_search, web_fetch) — for anything about the other company.
+3. The web (web_fetch) — any page I have the URL for: their site, a
+   directory, a reviews page. There is **no web search** on this install, so
+   I cannot discover who ranks or who exists; when that is the missing piece
+   I ask for the names or links.
 4. Asking the owner — last, and one question at a time.
 
 Never ask for something I can read. Never ask two questions in one message.`;

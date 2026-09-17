@@ -10,6 +10,7 @@ import {
   CopyIcon,
   CheckIcon,
   ExternalLinkIcon,
+  HelpCircleIcon,
 } from "@hugeicons/core-free-icons";
 import {
   Dialog,
@@ -129,6 +130,19 @@ export function SupportDialog({
               className="shrink-0 text-muted-foreground"
             />
           </a>
+
+          <Link
+            href="/help"
+            className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-accent"
+          >
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground shadow-[var(--shadow-inset)]">
+              <HugeiconsIcon icon={HelpCircleIcon} size={15} strokeWidth={1.75} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-medium">{t("support.help")}</span>
+              <span className="block text-xs text-muted-foreground">{t("support.helpHint")}</span>
+            </span>
+          </Link>
 
           <Link
             href="/settings"

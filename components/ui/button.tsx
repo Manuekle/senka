@@ -20,7 +20,9 @@ import { cn } from "@/lib/utils";
 const buttonVariants = cva(
   // Base — shared by every variant and size.
   "inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-[13px] text-sm font-medium whitespace-nowrap"
-  + " transition-[background-color,box-shadow,transform,border-color,color] duration-150 ease-[var(--btn-easing)]"
+  // `opacity` is listed on purpose: without it the disabled dim
+  // (`disabled:opacity-45`) snaps instantly and reads as a flicker.
+  + " transition-[background-color,box-shadow,transform,border-color,color,opacity] duration-150 ease-[var(--btn-easing)]"
   + " outline-none"
   // Focus — an outline, not a `ring`. `ring` composes into `box-shadow`, which
   // every variant here already spends on its surface depth, so the indicator

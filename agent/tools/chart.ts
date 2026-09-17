@@ -42,7 +42,7 @@ export default defineTool({
   description:
     "Draw a chart in the console: ranked bars, columns, a trend line, an area or a " +
     "share. Call it after reading the data with `pipeline`, `marketing`, `inbox`, " +
-    "`operations` or `run_python`, and pass the numbers you got. Use it for any answer " +
+    "`operations`, `seo` or `run_python`, and pass the numbers you got. Use it for any answer " +
     "about magnitude, ranking, share or movement over time — 'ventas de este año', " +
     "'de dónde vienen los leads', 'qué etapa pierde deals'. Always write a short " +
     "summary under it in the reply. For a flow, funnel or process, do not use this: " +

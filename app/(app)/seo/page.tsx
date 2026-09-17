@@ -62,6 +62,7 @@ import {
 } from "@/lib/seo-metrics";
 import { ChangeDialog } from "./_components/change-dialog";
 import { DeltaChip, SeoTable, prettyPath, sortRows, toneForChange, type SortKey } from "./_components/seo-table";
+import { SiteAuditPanel } from "./_components/site-audit";
 
 /**
  * How the site is doing in Google.
@@ -73,6 +74,10 @@ import { DeltaChip, SeoTable, prettyPath, sortRows, toneForChange, type SortKey 
  * window immediately before it, every figure carries its movement, and the
  * changes the operator logs are drawn onto the traffic chart so the two can be
  * looked at together.
+ *
+ * The audit tab is the exception that needs none of this: it crawls a URL
+ * the operator types, not a property Google verified, so it stays reachable
+ * without a connected account — often the first thing worth doing about SEO.
  *
  * The page never claims causation. A marker on a line and a before/after
  * average is exactly as strong a claim as the data supports — the person who
@@ -108,7 +113,7 @@ type SeoResponse = {
   readonly lost?: readonly SearchRow[];
 };
 
-type Tab = "overview" | "queries" | "pages";
+type Tab = "overview" | "queries" | "pages" | "audit";
 
 // ── Vocabulary ─────────────────────────────────────────────────────
 
@@ -265,18 +270,20 @@ function ChangeLog({
   readonly t: (key: string, params?: Record<string, string | number>) => string;
 }) {
   return (
-    <Card>
-      <CardHeader>
-        <div className="min-w-0 flex-1">
-          <CardTitle>{t("seo.changesTitle")}</CardTitle>
-          <CardDescription>{t("seo.changesSubtitle")}</CardDescription>
-        </div>
-        <Button className="shrink-0" onClick={onAdd} size="sm" type="button" variant="secondary">
-          <HugeiconsIcon icon={Add01Icon} size={15} strokeWidth={1.75} />
-          {t("seo.logChange")}
-        </Button>
-      </CardHeader>
-      <CardBody>
+    <div className="rounded-[20px] border border-border/70 bg-muted/50 p-1.5 shadow-[var(--shadow-float)]">
+      <div className="overflow-hidden rounded-[14px] border border-border/50 bg-card shadow-xs">
+        <CardHeader>
+          <div className="min-w-0 flex-1">
+            <CardTitle>{t("seo.changesTitle")}</CardTitle>
+            <CardDescription>{t("seo.changesSubtitle")}</CardDescription>
+          </div>
+          <Button className="shrink-0" onClick={onAdd} size="sm" type="button" variant="secondary">
+            <HugeiconsIcon icon={Add01Icon} size={15} strokeWidth={1.75} />
+            {t("seo.logChange")}
+          </Button>
+        </CardHeader>
+        <div className="mx-5 h-px bg-border/50" />
+        <CardBody>
         {changes.length === 0 ? (
           <p className="py-6 text-center text-muted-foreground text-sm">{t("seo.changesEmpty")}</p>
         ) : (
@@ -329,8 +336,9 @@ function ChangeLog({
             })}
           </ul>
         )}
-      </CardBody>
-    </Card>
+        </CardBody>
+      </div>
+    </div>
   );
 }
 
@@ -383,20 +391,26 @@ function Movers({
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("seo.gainers")}</CardTitle>
-          <CardDescription>{t("seo.gainersSubtitle")}</CardDescription>
-        </CardHeader>
-        <CardBody>{list(gained, t("seo.noGainers"))}</CardBody>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("seo.losers")}</CardTitle>
-          <CardDescription>{t("seo.losersSubtitle")}</CardDescription>
-        </CardHeader>
-        <CardBody>{list(lost, t("seo.noLosers"))}</CardBody>
-      </Card>
+      <div className="rounded-[20px] border border-border/70 bg-muted/50 p-1.5 shadow-[var(--shadow-float)]">
+        <div className="overflow-hidden rounded-[14px] border border-border/50 bg-card shadow-xs">
+          <CardHeader>
+            <CardTitle>{t("seo.gainers")}</CardTitle>
+            <CardDescription>{t("seo.gainersSubtitle")}</CardDescription>
+          </CardHeader>
+          <div className="mx-5 h-px bg-border/50" />
+          <CardBody>{list(gained, t("seo.noGainers"))}</CardBody>
+        </div>
+      </div>
+      <div className="rounded-[20px] border border-border/70 bg-muted/50 p-1.5 shadow-[var(--shadow-float)]">
+        <div className="overflow-hidden rounded-[14px] border border-border/50 bg-card shadow-xs">
+          <CardHeader>
+            <CardTitle>{t("seo.losers")}</CardTitle>
+            <CardDescription>{t("seo.losersSubtitle")}</CardDescription>
+          </CardHeader>
+          <div className="mx-5 h-px bg-border/50" />
+          <CardBody>{list(lost, t("seo.noLosers"))}</CardBody>
+        </div>
+      </div>
     </div>
   );
 }
@@ -425,6 +439,25 @@ function PanelSkeleton() {
   );
 }
 
+/** Queries/pages tabs: the table card only. Movers appear only when there
+ *  is movement, so their skeleton cards would promise cards that may never
+ *  land — the pair pops in with the data instead. */
+function TableSkeleton() {
+  return (
+    <div className="space-y-4">
+      <Card>
+        <div className="space-y-3 p-5">
+          <SkeletonBar width="30%" />
+          <SkeletonBar className="h-10" />
+          <SkeletonBar />
+          <SkeletonBar />
+          <SkeletonBar width="80%" />
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 // ── Page ───────────────────────────────────────────────────────────
 
 export default function SeoPage() {
@@ -437,7 +470,11 @@ export default function SeoPage() {
   const [tab, setTab] = useState<Tab>("overview");
   const [range, setRange] = useState<RangeId>("28d");
   const [site, setSite] = useState<string | null>(null);
-  const [data, setData] = useState<SeoResponse | null>(null);
+  /** One cached view per tab, like the audit tab keeps its own list: going
+   *  back to a tab paints its own data at once and refreshes underneath,
+   *  so switching tabs never flashes placeholders — or another tab's rows. */
+  const [cache, setCache] = useState<Partial<Record<Tab, SeoResponse>>>({});
+  const data = cache[tab] ?? null;
   // Two different loads. The first paint of the page owns the full skeleton;
   // a tab or range change must never take the header and the pickers down
   // with it, or every filter change looks like a navigation.
@@ -452,10 +489,6 @@ export default function SeoPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [changeOpen, setChangeOpen] = useState(false);
-  /** Views already fetched this session, keyed by tab + range + property. A
-   *  view that has been seen re-renders from state and refreshes underneath;
-   *  only a first visit is allowed to show placeholders. */
-  const seen = useRef<Set<string>>(new Set());
   /** The view currently on screen, keyed by the property the route *resolved*
    *  rather than the one that was asked for. The first load runs with no
    *  property chosen and adopts whichever one comes back, which re-fires the
@@ -464,19 +497,21 @@ export default function SeoPage() {
   const showing = useRef<string | null>(null);
 
   const load = async (options: { readonly quiet?: boolean } = {}) => {
-    const key = `${tab}:${range}:${site ?? ""}`;
-    const first = !seen.current.has(key);
-    if (!options.quiet) {
-      if (first && data) setPanelLoading(true);
-    }
+    // Pinned: a tab switch mid-flight must not file the answer under the
+    // tab that happens to be open when it lands.
+    const loadTab = tab;
+    const loadRange = range;
+    const loadSite = site;
+    // Skeleton only when this tab has nothing to show yet. Revisits paint
+    // the cached view at once; the refresh lands underneath.
+    if (!options.quiet && !cache[loadTab]) setPanelLoading(true);
 
-    const params = new URLSearchParams({ range, tab });
-    if (site) params.set("site", site);
+    const params = new URLSearchParams({ range: loadRange, tab: loadTab });
+    if (loadSite) params.set("site", loadSite);
     const result = await fetchJson<SeoResponse>(`/api/seo?${params}`, t);
 
     setIsLoading(false);
     setPanelLoading(false);
-    seen.current.add(key);
 
     if (!result.ok) {
       // "No Google account yet" arrives as a 200 carrying an error body,
@@ -493,14 +528,17 @@ export default function SeoPage() {
 
     setNotConnected(false);
     setError(null);
-    setData(result.data);
-    showing.current = `${tab}:${range}:${result.data.site ?? ""}`;
+    setCache((prev) => ({ ...prev, [loadTab]: result.data }));
+    showing.current = `${loadTab}:${loadRange}:${result.data.site ?? ""}`;
     // The route resolves the default property; adopting it here keeps the
     // picker and the data in agreement without a second round trip.
-    if (!site && result.data.site) setSite(result.data.site);
+    if (!loadSite && result.data.site) setSite(result.data.site);
   };
 
   useEffect(() => {
+    // The audit tab reads its own endpoint from its own panel — nothing
+    // here is Search Console, so nothing here needs this load.
+    if (tab === "audit") return;
     // Already showing exactly this view — see `showing`.
     if (site && showing.current === `${tab}:${range}:${site}`) return;
     void load();
@@ -607,9 +645,71 @@ export default function SeoPage() {
           ) : null}
         </header>
 
-        {/* Nothing here is retryable by pressing a button: a missing account
-            and a missing grant are both fixed on the Connections page. */}
-        {notConnected ? (
+        {/* The tab bar is always on screen: the audit tab needs no Google
+            account, and hiding it behind a connection state would bury the
+            one part of this page that works without one. */}
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <div>
+            <SlidingTabs
+              onValueChange={(next) => {
+                setPage(1);
+                setSearch("");
+                setTab(next as Tab);
+              }}
+              tabs={[
+                { id: "overview", label: t("seo.tabOverview") },
+                { id: "queries", label: t("seo.tabQueries") },
+                { id: "pages", label: t("seo.tabPages") },
+                { id: "audit", label: t("seo.tabAudit") },
+              ]}
+              value={tab}
+            />
+          </div>
+
+          {tab === "queries" || tab === "pages" ? (
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+              <Select onValueChange={(next) => {
+                setPage(1);
+                setSort(next as SortKey);
+              }} value={sort}>
+                <SelectTrigger aria-label={t("seo.sortBy")} className="w-full sm:w-[170px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="clicks">{t("seo.sortClicks")}</SelectItem>
+                  <SelectItem value="movement">{t("seo.sortMovement")}</SelectItem>
+                  <SelectItem value="impressions">{t("seo.sortImpressions")}</SelectItem>
+                  <SelectItem value="position">{t("seo.sortPosition")}</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="relative w-full sm:w-56">
+                <HugeiconsIcon
+                  className="-translate-y-1/2 absolute top-1/2 left-3 text-muted-foreground"
+                  icon={SearchIcon}
+                  size={16}
+                  strokeWidth={1.75}
+                />
+                <Input
+                  aria-label={t(kind === "page" ? "seo.searchPages" : "seo.searchQueries")}
+                  className="pl-9"
+                  onChange={(event) => {
+                    setPage(1);
+                    setSearch(event.target.value);
+                  }}
+                  placeholder={t(kind === "page" ? "seo.searchPages" : "seo.searchQueries")}
+                  value={search}
+                />
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        {/* Nothing in the Search Console tabs is retryable by pressing a
+            button: a missing account and a missing grant are both fixed on
+            the Connections page. */}
+        {tab === "audit" ? (
+          <SiteAuditPanel />
+        ) : notConnected ? (
           <EmptyState
             action={{ href: "/connections", label: t("seo.connectGoogle") }}
             body={t("seo.notConnectedBody")}
@@ -627,6 +727,11 @@ export default function SeoPage() {
 
             {isLoading ? (
               <PanelSkeleton />
+            ) : data === null ? (
+              // The seam between the tab switch and its first byte: no empty
+              // state may paint from absent data — only this tab's skeleton.
+              // (notConnected above is resolved state, so it still wins.)
+              tab === "overview" ? <PanelSkeleton /> : <TableSkeleton />
             ) : sites.length === 0 ? (
               <EmptyState
                 action={{
@@ -638,61 +743,6 @@ export default function SeoPage() {
               />
             ) : (
               <>
-                <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-                  <div>
-                    <SlidingTabs
-                      onValueChange={(next) => {
-                        setPage(1);
-                        setSearch("");
-                        setTab(next as Tab);
-                      }}
-                      tabs={[
-                        { id: "overview", label: t("seo.tabOverview") },
-                        { id: "queries", label: t("seo.tabQueries") },
-                        { id: "pages", label: t("seo.tabPages") },
-                      ]}
-                      value={tab}
-                    />
-                  </div>
-
-                  {tab === "overview" ? null : (
-                    <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-                      <Select onValueChange={(next) => {
-                        setPage(1);
-                        setSort(next as SortKey);
-                      }} value={sort}>
-                        <SelectTrigger aria-label={t("seo.sortBy")} className="w-full sm:w-[170px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="clicks">{t("seo.sortClicks")}</SelectItem>
-                          <SelectItem value="movement">{t("seo.sortMovement")}</SelectItem>
-                          <SelectItem value="impressions">{t("seo.sortImpressions")}</SelectItem>
-                          <SelectItem value="position">{t("seo.sortPosition")}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <div className="relative w-full sm:w-56">
-                        <HugeiconsIcon
-                          className="-translate-y-1/2 absolute top-1/2 left-3 text-muted-foreground"
-                          icon={SearchIcon}
-                          size={16}
-                          strokeWidth={1.75}
-                        />
-                        <Input
-                          aria-label={t(kind === "page" ? "seo.searchPages" : "seo.searchQueries")}
-                          className="pl-9"
-                          onChange={(event) => {
-                            setPage(1);
-                            setSearch(event.target.value);
-                          }}
-                          placeholder={t(kind === "page" ? "seo.searchPages" : "seo.searchQueries")}
-                          value={search}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
                 <motion.div
                   animate={{ opacity: 1 }}
                   initial={reduce ? false : { opacity: 0 }}
@@ -700,7 +750,7 @@ export default function SeoPage() {
                   transition={{ duration: 0.16, ease: "easeOut" }}
                 >
                   {panelLoading ? (
-                    <PanelSkeleton />
+                    tab === "overview" ? <PanelSkeleton /> : <TableSkeleton />
                   ) : tab === "overview" ? (
                     <div className="space-y-4">
                       {totals && deltas ? (
@@ -761,52 +811,61 @@ export default function SeoPage() {
                         </CardCarousel>
                       ) : null}
 
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>{t("seo.trafficTitle")}</CardTitle>
-                          <CardDescription>{t("seo.trafficSubtitle")}</CardDescription>
-                          <span className="ml-auto"><ChartPeriod value={range}>{t(`seo.range.${range}`)}</ChartPeriod></span>
-                        </CardHeader>
-                        <CardBody>
-                          <TrafficChart changes={changes} locale={locale} series={series} t={t} />
-                        </CardBody>
-                      </Card>
+                      <div className="rounded-[20px] border border-border/70 bg-muted/50 p-1.5 shadow-[var(--shadow-float)]">
+                        <div className="overflow-hidden rounded-[14px] border border-border/50 bg-card shadow-xs">
+                          <CardHeader>
+                            <CardTitle>{t("seo.trafficTitle")}</CardTitle>
+                            <CardDescription>{t("seo.trafficSubtitle")}</CardDescription>
+                            <span className="ml-auto"><ChartPeriod value={range}>{t(`seo.range.${range}`)}</ChartPeriod></span>
+                          </CardHeader>
+                          <div className="mx-5 h-px bg-border/50" />
+                          <CardBody>
+                            <TrafficChart changes={changes} locale={locale} series={series} t={t} />
+                          </CardBody>
+                        </div>
+                      </div>
 
                       <div className="grid gap-4 lg:grid-cols-2">
-                        <Card>
-                          <CardHeader>
-                            <CardTitle>{t("seo.devicesTitle")}</CardTitle>
-                            <CardDescription>{t("seo.devicesSubtitle")}</CardDescription>
-                          </CardHeader>
-                          <CardBody>
-                            <DonutChart
-                              data={(data?.devices ?? []).map((row) => ({
-                                formatted: formatCount(row.clicks, locale),
-                                key: row.key,
-                                label: DEVICE_KEYS[row.key] ? t(DEVICE_KEYS[row.key]) : row.key,
-                                value: row.clicks,
-                              }))}
-                              emptyLabel={t("seo.noTraffic")}
-                            />
-                          </CardBody>
-                        </Card>
-                        <Card>
-                          <CardHeader>
-                            <CardTitle>{t("seo.countriesTitle")}</CardTitle>
-                            <CardDescription>{t("seo.countriesSubtitle")}</CardDescription>
-                          </CardHeader>
-                          <CardBody>
-                            <RankedBars
-                              bars={(data?.countries ?? []).map((row) => ({
-                                formatted: formatCount(row.clicks, locale),
-                                key: row.key,
-                                label: countryLabel(row.key, locale),
-                                value: row.clicks,
-                              }))}
-                              emptyLabel={t("seo.noTraffic")}
-                            />
-                          </CardBody>
-                        </Card>
+                        <div className="rounded-[20px] border border-border/70 bg-muted/50 p-1.5 shadow-[var(--shadow-float)]">
+                          <div className="overflow-hidden rounded-[14px] border border-border/50 bg-card shadow-xs">
+                            <CardHeader>
+                              <CardTitle>{t("seo.devicesTitle")}</CardTitle>
+                              <CardDescription>{t("seo.devicesSubtitle")}</CardDescription>
+                            </CardHeader>
+                            <div className="mx-5 h-px bg-border/50" />
+                            <CardBody>
+                              <DonutChart
+                                data={(data?.devices ?? []).map((row) => ({
+                                  formatted: formatCount(row.clicks, locale),
+                                  key: row.key,
+                                  label: DEVICE_KEYS[row.key] ? t(DEVICE_KEYS[row.key]) : row.key,
+                                  value: row.clicks,
+                                }))}
+                                emptyLabel={t("seo.noTraffic")}
+                              />
+                            </CardBody>
+                          </div>
+                        </div>
+                        <div className="rounded-[20px] border border-border/70 bg-muted/50 p-1.5 shadow-[var(--shadow-float)]">
+                          <div className="overflow-hidden rounded-[14px] border border-border/50 bg-card shadow-xs">
+                            <CardHeader>
+                              <CardTitle>{t("seo.countriesTitle")}</CardTitle>
+                              <CardDescription>{t("seo.countriesSubtitle")}</CardDescription>
+                            </CardHeader>
+                            <div className="mx-5 h-px bg-border/50" />
+                            <CardBody>
+                              <RankedBars
+                                bars={(data?.countries ?? []).map((row) => ({
+                                  formatted: formatCount(row.clicks, locale),
+                                  key: row.key,
+                                  label: countryLabel(row.key, locale),
+                                  value: row.clicks,
+                                }))}
+                                emptyLabel={t("seo.noTraffic")}
+                              />
+                            </CardBody>
+                          </div>
+                        </div>
                       </div>
 
                       <ChangeLog
@@ -823,7 +882,7 @@ export default function SeoPage() {
                       <Movers kind={kind} locale={locale} rows={data?.rows ?? []} t={t} />
 
                       <Card className="rounded-[20px] border-border/70 bg-muted/50 p-1.5 shadow-[var(--shadow-float)]">
-                        <div className="rounded-[14px]">
+                        <div className="overflow-hidden rounded-[14px] border border-border/50 bg-card shadow-xs">
                         <CardHeader>
                           <CardTitle>
                             {t(kind === "page" ? "seo.pagesTitle" : "seo.queriesTitle")}
@@ -832,6 +891,8 @@ export default function SeoPage() {
                             {t(kind === "page" ? "seo.pagesSubtitle" : "seo.queriesSubtitle")}
                           </CardDescription>
                         </CardHeader>
+                        <div className="mx-5 h-px bg-border/50" />
+                        <div className="px-5 py-4">
                         <SeoTable
                           emptyLabel={search ? t("seo.noResults") : t("seo.noTraffic")}
                           kind={kind}
@@ -839,6 +900,7 @@ export default function SeoPage() {
                           rows={visible}
                           t={t}
                         />
+                        </div>
                         </div>
                       </Card>
 
@@ -854,14 +916,16 @@ export default function SeoPage() {
                       ) : null}
 
                       {(data?.lost ?? []).length > 0 ? (
-                        <Card>
-                          <CardHeader>
-                            <CardTitle>{t("seo.lostTitle")}</CardTitle>
-                            <CardDescription>
-                              {t(kind === "page" ? "seo.lostPagesSubtitle" : "seo.lostSubtitle")}
-                            </CardDescription>
-                          </CardHeader>
-                          <CardBody>
+                        <div className="rounded-[20px] border border-border/70 bg-muted/50 p-1.5 shadow-[var(--shadow-float)]">
+                          <div className="overflow-hidden rounded-[14px] border border-border/50 bg-card shadow-xs">
+                            <CardHeader>
+                              <CardTitle>{t("seo.lostTitle")}</CardTitle>
+                              <CardDescription>
+                                {t(kind === "page" ? "seo.lostPagesSubtitle" : "seo.lostSubtitle")}
+                              </CardDescription>
+                            </CardHeader>
+                            <div className="mx-5 h-px bg-border/50" />
+                            <CardBody>
                             <ul className="space-y-2">
                               {(data?.lost ?? []).map((row) => (
                                 <li className="flex items-baseline gap-3 text-sm" key={row.key}>
@@ -876,8 +940,9 @@ export default function SeoPage() {
                                 </li>
                               ))}
                             </ul>
-                          </CardBody>
-                        </Card>
+                            </CardBody>
+                          </div>
+                        </div>
                       ) : null}
                     </div>
                   )}

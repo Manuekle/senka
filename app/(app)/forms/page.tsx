@@ -119,32 +119,32 @@ function FormsTableScroller({
 
   return (
     <div ref={scrollRef} className="x-fade overflow-x-auto scrollbar-hide">
-      <table className="w-full border-separate border-spacing-y-1.5 px-1.5 text-sm">
-        <thead className="text-xs text-muted-foreground">
-          <tr>
-            <th className="px-3 py-1.5 text-left font-medium">{t("forms.columnName")}</th>
-            <th className="px-3 py-1.5 text-left font-medium">{t("forms.columnStatus")}</th>
-            <th className="px-3 py-1.5 text-left font-medium">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-border/60 text-left text-xs text-muted-foreground">
+            <th className="py-2 pr-4 font-medium">{t("forms.columnName")}</th>
+            <th className="py-2 pr-4 font-medium">{t("forms.columnStatus")}</th>
+            <th className="py-2 pr-4 font-medium">
               {t("forms.columnResponses")}
             </th>
-            <th className="px-3 py-1.5 text-left font-medium">
+            <th className="py-2 pr-4 font-medium">
               {t("forms.columnUpdated")}
             </th>
-            <th className="px-3 py-1.5 text-right font-medium">
+            <th className="py-2 text-right font-medium">
               {t("forms.columnActions")}
             </th>
           </tr>
         </thead>
         <tbody>
           {forms.map((form) => (
-            <tr key={form.id} className="transition-colors hover:[&>td]:bg-muted/40">
-              <td className="rounded-l-[14px] border-y border-l border-border/50 bg-card px-3 py-2.5 shadow-xs">
+            <tr key={form.id} className="border-b border-border/50 last:border-b-0">
+              <td className="max-w-[240px] py-3 pr-4">
                 <Link href={`/forms/${form.id}`} className="font-medium hover:underline">
                   {form.name}
                 </Link>
                 <p className="text-xs text-muted-foreground">/f/{form.slug}</p>
               </td>
-              <td className="border-y border-border/50 bg-card px-3 py-2.5">
+              <td className="py-3 pr-4">
                 <button type="button" onClick={() => onTogglePublished(form)}>
                   <StatusBadge
                     status={form.status === "published" ? "active" : "draft"}
@@ -155,7 +155,7 @@ function FormsTableScroller({
                   />
                 </button>
               </td>
-              <td className="border-y border-border/50 bg-card px-3 py-2.5">
+              <td className="py-3 pr-4">
                 <span>{t("forms.responses", { count: form.responseCount })}</span>
                 {form.responseCount > 0 ? (
                   <p className="text-xs text-muted-foreground">
@@ -166,10 +166,10 @@ function FormsTableScroller({
                   </p>
                 ) : null}
               </td>
-              <td className="border-y border-border/50 bg-card px-3 py-2.5 text-xs text-muted-foreground">
+              <td className="py-3 pr-4 text-xs text-muted-foreground">
                 {relativeTime(form.updatedAt, locale)}
               </td>
-              <td className="rounded-r-[14px] border-y border-r border-border/50 bg-card px-3 py-2.5 shadow-xs">
+              <td className="py-3 text-right">
                 <div className="flex items-center justify-end gap-1">
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -238,7 +238,7 @@ function FormsTableScroller({
 }
 
 export default function FormsPage() {
-  const { locale, t } = useI18n();
+  const { t } = useI18n();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const { toast } = useToast();
   const [forms, setForms] = useState<FormRow[]>([]);
@@ -347,13 +347,15 @@ export default function FormsPage() {
             </Card>
           ) : (
             <Card className="rounded-[20px] border-border/70 bg-muted/50 p-1.5 shadow-[var(--shadow-float)] overflow-visible">
-              <FormsTableScroller
-                forms={forms}
-                copied={copied}
-                onCopy={(form) => void copyLink(form)}
-                onTogglePublished={(form) => void togglePublished(form)}
-                onRemove={(form) => void remove(form)}
-              />
+              <div className="overflow-hidden rounded-[14px] border border-border/50 bg-card px-5 py-4 shadow-xs">
+                <FormsTableScroller
+                  forms={forms}
+                  copied={copied}
+                  onCopy={(form) => void copyLink(form)}
+                  onTogglePublished={(form) => void togglePublished(form)}
+                  onRemove={(form) => void remove(form)}
+                />
+              </div>
             </Card>
           )}
         </div>

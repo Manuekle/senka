@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@/components/icons/icon";
-import { ArrowDown01Icon, ArrowUp01Icon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowUp02Icon } from "@hugeicons/core-free-icons";
 import type { ReactNode } from "react";
 import { Card } from "./dashboard-card";
 import { cn } from "@/lib/utils";
@@ -243,7 +243,7 @@ export function AdsRow({
           {trailing}
           <HugeiconsIcon
             className="shrink-0 text-muted-foreground"
-            icon={expanded ? ArrowUp01Icon : ArrowDown01Icon}
+            icon={expanded ? ArrowUp02Icon : ArrowDown01Icon}
             size={14}
             strokeWidth={1.75}
           />

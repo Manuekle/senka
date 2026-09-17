@@ -31,6 +31,7 @@ import { SidebarStatus } from "@/components/ai-elements/sidebar-status";
 import { SupportDialog } from "@/components/ai-elements/support-dialog";
 import { CommandPalette } from "@/components/ai-elements/command-palette";
 import { BusinessSwitcher } from "./business-switcher";
+import { ReviewPrompt } from "./review-prompt";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { getChats } from "@/lib/dashboard-store";
 import { NAV_GROUPS, NAV_ITEMS, type NavItem } from "@/lib/nav-items";
@@ -366,6 +367,9 @@ export function AppShell({ children }: { readonly children: ReactNode }) {
           {children}
         </main>
       </div>
+      {/* Mounted with the shell rather than a page, so the cadence is checked
+          once per visit to the app wherever it starts. */}
+      <ReviewPrompt />
     </div>
   );
 }

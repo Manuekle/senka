@@ -7,6 +7,8 @@ import { AgentLoading } from "@/app/_components/chat/agent-loading";
 import { ChartArtifact } from "@/app/_components/chat/artifacts/chart-artifact";
 import { ReportArtifact } from "@/app/_components/chat/artifacts/report-artifact";
 import type { ChartSpec, ReportSpec } from "@/lib/artifacts";
+import type { EveDynamicToolPart } from "eve/react";
+import { InputRequestCard } from "@/app/_components/chat/input-request-card";
 
 /**
  * Every shape the agent can draw in `/chat`, on one page.
@@ -228,7 +230,7 @@ stateDiagram-v2
 const VIEWS: readonly (readonly [
   string,
   string,
-  "chart" | "connecting" | "mermaid" | "report" | "restoring",
+  "chart" | "connecting" | "mermaid" | "question" | "report" | "restoring",
   ChartSpec | null,
 ])[] =
   [
@@ -240,6 +242,7 @@ const VIEWS: readonly (readonly [
     ["grouped", "Columnas agrupadas · cuatro series", "chart", FOUR],
     ["report", "Informe con descarga en PDF", "report", null],
     ["mermaid", "Diagramas en el texto de la respuesta", "mermaid", null],
+    ["question", "Preguntas y aprobaciones · todas las fases", "question", null],
     ["restoring", "Pantalla de carga · recuperando una conversación", "restoring", null],
     ["connecting", "Pantalla de carga · primera conexión", "connecting", null],
   ];
@@ -287,6 +290,7 @@ export default function Page() {
       <h2 className="font-medium text-foreground text-sm">{title}</h2>
       {kind === "chart" && spec ? <ChartArtifact spec={spec} /> : null}
       {kind === "report" ? <ReportArtifact spec={REPORT} /> : null}
+      {kind === "question" ? <QuestionPhases /> : null}
       {kind === "mermaid" ? (
         <div className="rounded-xl border border-border bg-card p-4 text-sm">
           <MessageResponse>{DIAGRAM}</MessageResponse>
@@ -306,5 +310,105 @@ export default function Page() {
         </div>
       ) : null}
     </main>
+  );
+}
+
+// ── Questions and approvals ────────────────────────────────────────
+
+const QUESTION_OPTIONS = [
+  { id: "full", label: "Auditoría completa (técnica + contenido + keywords)" },
+  { id: "gsc", label: "Solo datos de Search Console", description: "Clics, impresiones y posiciones" },
+  { id: "page", label: "Solo la home" },
+];
+
+function questionPart(
+  state: EveDynamicToolPart["state"],
+  extra: Partial<{ allowFreeform: boolean; approval: boolean; response: { optionId?: string; text?: string } }> = {},
+): EveDynamicToolPart {
+  const approval = extra.approval === true;
+  return {
+    type: "dynamic-tool",
+    toolCallId: `call-${state}-${approval ? "a" : "q"}`,
+    toolName: approval ? "send_payment_link" : "ask_question",
+    stepIndex: 1,
+    state,
+    input: approval ? { amount: 45000, currency: "ARS", description: "Plan trimestral" } : { prompt: "" },
+    approval: { id: "req", ...(state === "output-denied" ? { approved: false } : {}) },
+    ...(state === "output-available" ? { output: { ok: true, url: "https://mpago.la/x" } } : {}),
+    toolMetadata: {
+      eve: {
+        kind: "tool-call",
+        name: approval ? "send_payment_link" : "ask_question",
+        inputRequest: approval
+          ? {
+              requestId: "req",
+              prompt: "¿Genero el link de pago por $45.000 para Marta?",
+              options: [
+                { id: "approve", label: "Approve" },
+                { id: "deny", label: "Deny" },
+              ],
+            }
+          : {
+              requestId: "req",
+              prompt: "¿Qué tipo de informe SEO querés para gymratplus.com?",
+              options: QUESTION_OPTIONS,
+              allowFreeform: extra.allowFreeform ?? true,
+            },
+        ...(extra.response ? { inputResponse: { requestId: "req", ...extra.response } } : {}),
+      },
+    },
+  } as EveDynamicToolPart;
+}
+
+function QuestionPhases() {
+  const [answer, setAnswer] = useState<{ optionId?: string; text?: string }>();
+  const noop = () => {};
+  const rows: readonly [string, React.ReactNode][] = [
+    [
+      "Interactiva · elegí una opción (pasa a enviando)",
+      <InputRequestCard
+        answer={answer}
+        canRespond
+        key="live"
+        movedOn={false}
+        onInputResponses={(responses) => setAnswer({ optionId: responses[0]?.optionId, text: responses[0]?.text })}
+        part={questionPart(answer ? "approval-responded" : "approval-requested")}
+        toolLabel="ask_question"
+      />,
+    ],
+    [
+      "Respondida · la conversación siguió",
+      <InputRequestCard answer={{ optionId: "gsc" }} canRespond key="answered" movedOn onInputResponses={noop} part={questionPart("approval-responded")} toolLabel="ask_question" />,
+    ],
+    [
+      "Respondida con texto libre",
+      <InputRequestCard answer={{ text: "Las dos cosas, pero empezá por keywords" }} canRespond key="text" movedOn onInputResponses={noop} part={questionPart("approval-responded")} toolLabel="ask_question" />,
+    ],
+    [
+      "Cerrada · recargada sin respuesta registrada (el bug original)",
+      <InputRequestCard answer={undefined} canRespond key="closed" movedOn onInputResponses={noop} part={questionPart("approval-requested")} toolLabel="ask_question" />,
+    ],
+    [
+      "Aprobación pendiente",
+      <InputRequestCard answer={undefined} canRespond key="approval" movedOn={false} onInputResponses={noop} part={questionPart("approval-requested", { approval: true })} toolLabel="send_payment_link" />,
+    ],
+    [
+      "Aprobación aprobada y ejecutada",
+      <InputRequestCard answer={{ optionId: "approve" }} canRespond key="approved" movedOn onInputResponses={noop} part={questionPart("output-available", { approval: true })} toolLabel="send_payment_link" />,
+    ],
+    [
+      "Aprobación rechazada",
+      <InputRequestCard answer={{ optionId: "deny" }} canRespond key="denied" movedOn onInputResponses={noop} part={questionPart("output-denied", { approval: true })} toolLabel="send_payment_link" />,
+    ],
+  ];
+  return (
+    <div className="space-y-6">
+      {rows.map(([label, node]) => (
+        <div className="space-y-1.5" key={label}>
+          <p className="text-[11px] text-muted-foreground uppercase tracking-wide">{label}</p>
+          {node}
+        </div>
+      ))}
+    </div>
   );
 }

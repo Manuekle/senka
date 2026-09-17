@@ -32,8 +32,9 @@ ${INTAKE}
 ## competitors
 
 1. **Establish who they actually are.** If the owner has not named them,
-   web_search for the service plus the area and take who ranks and who
-   advertises. Then say the list back before researching it — a competitor
+   ask for two or three names or sites, or take the ones customers mention in
+   inbox — there is no web search on this install. Then say the list back
+   before researching it — a competitor
    list nobody agreed on wastes the whole exercise.
 2. **Per competitor, web_fetch and read:**
    - What they sell, in their words, and who they say it is for.
@@ -41,7 +42,9 @@ ${INTAKE}
      shows prices is itself the finding, and often the opening.
    - What they promise — delivery time, guarantee, coverage.
    - How they take an enquiry: form, WhatsApp, phone.
-3. **web_search for the last year** — reviews, news, complaints, changes.
+3. **Reviews and news, when you have the link** — web_fetch a reviews page,
+   Maps listing or news page the owner gives you. Without one, say reviews
+   were not checked rather than implying they were.
    Reviews are the highest-signal source here: they say what customers hate
    about the alternative, in the customers' own words.
 4. **Write the comparison**, in this order:
@@ -56,8 +59,9 @@ ${INTAKE}
 
 ## topic
 
-1. web_search broadly first, then web_fetch the three or four sources that
-   actually say something rather than repeating each other.
+1. web_fetch the sources the owner points to (there is no web search here —
+   ask for links when there are none), keeping the three or four that actually
+   say something rather than repeating each other.
 2. Report: what is established and by whom, where sources disagree, what is
    specific to this country or market, and what could not be confirmed.
 3. Cite a URL for every factual claim. A claim with no source is removed, not

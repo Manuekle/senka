@@ -3,15 +3,17 @@
 import type { EveDynamicToolPart, EveMessage, EveMessagePart } from "eve/react";
 import { HugeiconsIcon } from "@/components/icons/icon";
 import { ExternalLinkIcon, File01Icon } from "@hugeicons/core-free-icons";
-import { type FormEvent, memo, useState } from "react";
+import { memo } from "react";
 import { Message, MessageContent } from "@/components/ai-elements/message";
 import { MessageResponse } from "@/components/ai-elements/message-response";
 import { Reasoning, ReasoningContent, ReasoningTrigger } from "@/components/ai-elements/reasoning";
 import { ToolResult, ToolResultOutput, type ToolResultStatus } from "@/components/agents/tool-result";
 import { isArtifactPart, ToolArtifact } from "./chat/artifacts";
+import { InputRequestCard } from "./chat/input-request-card";
 import { Orb } from "@/components/ui/orb";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { conversationMovedOn } from "@/lib/chat-input-request";
+import type { SessionAnswers } from "@/lib/chat-input-answers";
 import { useT } from "@/lib/i18n/provider";
 
 export type AgentInputResponse = {
@@ -21,12 +23,18 @@ export type AgentInputResponse = {
 };
 
 export const AgentMessage = memo(function AgentMessage({
+  answers,
   canRespond,
+  isLast,
   isStreaming,
   message,
   onInputResponses,
 }: {
+  /** Answers given on this device to the agent's questions, by request id. */
+  readonly answers: SessionAnswers;
   readonly canRespond: boolean;
+  /** Whether this is the newest message — a question in an older one is settled. */
+  readonly isLast: boolean;
   readonly isStreaming: boolean;
   readonly message: EveMessage;
   readonly onInputResponses: (responses: readonly AgentInputResponse[]) => void | Promise<void>;
@@ -46,8 +54,11 @@ export const AgentMessage = memo(function AgentMessage({
       <MessageContent>
         {message.parts.map((part, index) => (
           <AgentMessagePart
+            answers={answers}
             canRespond={canRespond}
+            isLast={isLast}
             key={partKey(part, index)}
+            message={message}
             onInputResponses={onInputResponses}
             part={part}
             showCaret={isStreaming && message.role === "assistant" && index === lastTextIndex}
@@ -67,12 +78,18 @@ export const AgentMessage = memo(function AgentMessage({
 });
 
 function AgentMessagePart({
+  answers,
   canRespond,
+  isLast,
+  message,
   onInputResponses,
   part,
   showCaret,
 }: {
+  readonly answers: SessionAnswers;
   readonly canRespond: boolean;
+  readonly isLast: boolean;
+  readonly message: EveMessage;
   readonly onInputResponses: (responses: readonly AgentInputResponse[]) => void | Promise<void>;
   readonly part: EveMessagePart;
   readonly showCaret: boolean;
@@ -194,26 +211,57 @@ function AgentMessagePart({
         return <ToolArtifact part={part} />;
       }
 
+      const label = toolLabel(part);
+      const inputRequest = part.toolMetadata?.eve?.inputRequest;
+
+      // A question or an approval is a card, not a disclosure: it is waiting
+      // on a person, and a spinner labelled "Ejecutando" tells them nothing.
+      // An approval that went on to run still shows what it produced below.
+      if (inputRequest) {
+        const card = (
+          <InputRequestCard
+            answer={part.toolMetadata?.eve?.inputResponse ?? answers[inputRequest.requestId]}
+            canRespond={canRespond}
+            movedOn={conversationMovedOn(message, isLast, part)}
+            onInputResponses={onInputResponses}
+            part={part}
+            toolLabel={label}
+          />
+        );
+        const ran = part.state === "output-available" || part.state === "output-error";
+        if (!ran || part.toolName === "ask_question") return card;
+        const ranOutput = part.errorText ?? formatToolOutput(part.output);
+        return (
+          <div className="space-y-1">
+            {card}
+            <ToolResult
+              tool={label}
+              title={t(TOOL_STATE_KEYS[part.state] ?? "chat.toolRunning")}
+              status={toolResultStatus(part.state)}
+              kind="terminal"
+              defaultOpen={false}
+              copyText={ranOutput || undefined}
+            >
+              {ranOutput ? <ToolResultOutput language="json">{ranOutput}</ToolResultOutput> : null}
+            </ToolResult>
+          </div>
+        );
+      }
+
       // Everything else is an execution disclosure: name, status, and the
       // payload it produced, collapsed once it finishes so a long run doesn't
-      // bury the answer. It stays open while it needs a person.
-      const needsPerson = part.state === "approval-requested" || part.state === "approval-responded";
+      // bury the answer.
       const output = part.errorText ?? formatToolOutput(part.output);
       return (
         <ToolResult
-          tool={part.toolName}
+          tool={label}
           title={t(TOOL_STATE_KEYS[part.state] ?? "chat.toolRunning")}
           status={toolResultStatus(part.state)}
           kind="terminal"
-          defaultOpen={needsPerson}
-          collapseOnComplete={!needsPerson}
+          defaultOpen={false}
+          collapseOnComplete
           copyText={output || undefined}
         >
-          <InputRequestActions
-            canRespond={canRespond}
-            part={part}
-            onInputResponses={onInputResponses}
-          />
           {output ? <ToolResultOutput language="json">{output}</ToolResultOutput> : null}
         </ToolResult>
       );
@@ -232,6 +280,8 @@ function toolResultStatus(state: EveDynamicToolPart["state"]): ToolResultStatus 
       return "error";
     case "output-available":
       return "success";
+    case "output-denied":
+      return "cancelled";
     default:
       return "running";
   }
@@ -244,7 +294,29 @@ const TOOL_STATE_KEYS: Partial<Record<EveDynamicToolPart["state"], string>> = {
   "input-available": "chat.toolRunning",
   "output-available": "chat.toolCompleted",
   "output-error": "chat.toolFailed",
+  "output-denied": "chat.toolDenied",
 };
+
+/**
+ * What the disclosure names the call. Eve prefixes framework actions
+ * (`eve:load-skill`, `eve:subagent:analista`) and the bare prefix means nothing
+ * to the person reading; the skill or specialist's own name does.
+ */
+function toolLabel(part: EveDynamicToolPart): string {
+  const eve = part.toolMetadata?.eve;
+  if (eve?.kind === "load-skill" || part.toolName === "eve:load-skill") {
+    const name = isRecord(part.input) && typeof part.input.name === "string" ? part.input.name : undefined;
+    return name ? `load_skill · ${name}` : "load_skill";
+  }
+  if (eve?.kind === "subagent-call" || part.toolName.startsWith("eve:subagent:")) {
+    return eve?.name ?? part.toolName.slice("eve:subagent:".length);
+  }
+  return part.toolName;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
 
 /** Tool payloads arrive as objects far more often than strings. */
 function formatToolOutput(output: unknown): string {
@@ -255,84 +327,6 @@ function formatToolOutput(output: unknown): string {
   } catch {
     return String(output);
   }
-}
-
-function InputRequestActions({
-  canRespond,
-  onInputResponses,
-  part,
-}: {
-  readonly canRespond: boolean;
-  readonly onInputResponses: (responses: readonly AgentInputResponse[]) => void | Promise<void>;
-  readonly part: EveDynamicToolPart;
-}) {
-  const t = useT();
-  const [text, setText] = useState("");
-  const inputRequest = part.toolMetadata?.eve?.inputRequest;
-  if (!inputRequest) {
-    return null;
-  }
-
-  const inputResponse = part.toolMetadata?.eve?.inputResponse;
-  const selectedOption = inputRequest.options?.find(
-    (option) => option.id === inputResponse?.optionId,
-  );
-  const acceptsText = inputRequest.allowFreeform || !inputRequest.options?.length;
-
-  const handleTextResponse = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const response = text.trim();
-    if (!response || !canRespond) return;
-    void onInputResponses([{ requestId: inputRequest.requestId, text: response }]);
-  };
-
-  return (
-    <div className="space-y-3 rounded-lg border border-border bg-card/50 p-4 shadow-[var(--shadow-soft)]">
-      <p className="text-sm text-muted-foreground">{inputRequest.prompt}</p>
-      {inputResponse ? (
-        <p className="font-medium text-sm">
-          {t("chat.responded", { response: selectedOption?.label ?? inputResponse.text ?? inputResponse.optionId ?? "" })}
-        </p>
-      ) : (
-        <div className="flex flex-wrap gap-2">
-          {inputRequest.options?.map((option) => (
-            <Button
-              disabled={!canRespond}
-              key={option.id}
-              onClick={() => {
-                void onInputResponses([
-                  {
-                    optionId: option.id,
-                    requestId: inputRequest.requestId,
-                  },
-                ]);
-              }}
-              size="sm"
-              title={option.description}
-              type="button"
-              variant={option.style === "danger" ? "destructive" : "default"}
-            >
-              {option.label}
-            </Button>
-          ))}
-          {acceptsText ? (
-            <form className="flex min-w-64 flex-1 gap-2" onSubmit={handleTextResponse}>
-              <Input
-                aria-label={t("chat.responseLabel")}
-                disabled={!canRespond}
-                onChange={(event) => setText(event.target.value)}
-                placeholder={t("chat.typeResponse")}
-                value={text}
-              />
-              <Button disabled={!canRespond || !text.trim()} size="sm" type="submit">
-                {t("chat.send")}
-              </Button>
-            </form>
-          ) : null}
-        </div>
-      )}
-    </div>
-  );
 }
 
 function partKey(part: EveMessagePart, index: number): string {

@@ -6,7 +6,7 @@ import { HugeiconsIcon } from "@/components/icons/icon";
 import {
   Add01Icon,
   ArrowDown01Icon,
-  ArrowUp01Icon,
+  ArrowUp02Icon,
   Copy01Icon,
   Delete02Icon,
   DragDropVerticalIcon,
@@ -306,7 +306,7 @@ function StepRow({
           )}
         >
           <RowAction
-            icon={ArrowUp01Icon}
+            icon={ArrowUp02Icon}
             label={t("forms.builder.moveStepUp")}
             disabled={index === 0}
             onClick={() => onMove(-1)}

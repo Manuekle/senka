@@ -61,8 +61,9 @@ Before any web search: does this account already know them?
 
 1. web_fetch the site: what they sell, who to, how they position it, and the
    words they use for it — those words go straight into the outreach later.
-2. web_search for the last twelve months: news, funding, hiring, openings,
-   closures, complaints. Anything that is a reason to talk this month.
+2. web_fetch their news, blog or careers page if the site links one: openings,
+   hiring, launches, complaints — anything that is a reason to talk this month.
+   There is no web search here; if nothing on their own pages is a reason, say so.
 3. search_knowledge for what this business sells them and at what price, so
    the brief lands on something concrete rather than "there may be an
    opportunity".

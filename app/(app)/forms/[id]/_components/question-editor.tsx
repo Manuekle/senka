@@ -5,7 +5,7 @@ import { Reorder, useDragControls, useReducedMotion } from "motion/react";
 import { HugeiconsIcon } from "@/components/icons/icon";
 import {
   ArrowDown01Icon,
-  ArrowUp01Icon,
+  ArrowUp02Icon,
   Add01Icon,
   Delete01Icon,
   DragDropVerticalIcon,
@@ -448,7 +448,7 @@ export function MoveButtons({
     <div className="flex shrink-0 items-center">
       <IconButton
         label={upLabel}
-        icon={ArrowUp01Icon}
+        icon={ArrowUp02Icon}
         disabled={index === 0}
         onClick={() => onMove(-1)}
       />

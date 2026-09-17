@@ -101,7 +101,7 @@ function MetricCell({
   readonly percent?: string | null;
 }) {
   return (
-    <td className="border-y border-border/50 bg-card px-3 py-2.5 text-right">
+    <td className="py-3 pr-4 text-right">
       <div className="flex flex-col items-end gap-0.5">
         <span className="font-medium tabular-nums">{formatted}</span>
         {isNew ? (
@@ -183,7 +183,7 @@ export function SeoTable({
   }, [updateFade, rows]);
 
   if (rows.length === 0) {
-    return <div className="px-5 py-16 text-center text-muted-foreground text-sm">{emptyLabel}</div>;
+    return <div className="py-12 text-center text-muted-foreground text-sm">{emptyLabel}</div>;
   }
 
   return (
@@ -191,24 +191,24 @@ export function SeoTable({
        keyword onto four lines. The table keeps its width and scrolls inside
        its own card instead — the page itself never scrolls sideways. */
     <div ref={scrollRef} className="x-fade overflow-x-auto scrollbar-hide">
-      <table className="w-full min-w-[42rem] border-separate border-spacing-y-1.5 px-1.5 text-sm">
-        <thead className="text-muted-foreground text-xs">
-          <tr>
-            <th className="px-3 py-1.5 text-left font-medium">
+      <table className="w-full min-w-[42rem] text-sm">
+        <thead>
+          <tr className="border-b border-border/60 text-left text-muted-foreground text-xs">
+            <th className="py-2 pr-4 font-medium">
               {t(kind === "query" ? "seo.columnQuery" : "seo.columnPage")}
             </th>
-            <th className="px-3 py-1.5 text-right font-medium">{t("seo.clicks")}</th>
-            <th className="px-3 py-1.5 text-right font-medium">{t("seo.impressions")}</th>
-            <th className="px-3 py-1.5 text-right font-medium">{t("seo.ctr")}</th>
-            <th className="px-3 py-1.5 text-right font-medium">{t("seo.position")}</th>
+            <th className="py-2 pr-4 text-right font-medium">{t("seo.clicks")}</th>
+            <th className="py-2 pr-4 text-right font-medium">{t("seo.impressions")}</th>
+            <th className="py-2 pr-4 text-right font-medium">{t("seo.ctr")}</th>
+            <th className="py-2 text-right font-medium">{t("seo.position")}</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => {
             const positionMoved = formatPositionChange(row.positionChange);
             return (
-              <tr className="transition-colors hover:[&>td]:bg-muted/40" key={row.key}>
-                <td className="max-w-[22rem] rounded-l-[14px] border-y border-l border-border/50 bg-card px-3 py-2.5 shadow-xs">
+              <tr className="border-b border-border/50 last:border-b-0" key={row.key}>
+                <td className="max-w-[22rem] py-3 pr-4">
                   {kind === "page" ? (
                     <a
                       className="inline-flex items-center gap-1.5 truncate font-medium hover:underline"
@@ -256,7 +256,7 @@ export function SeoTable({
                   }
                 />
 
-                <td className="rounded-r-[14px] border-y border-r border-border/50 bg-card px-3 py-2.5 text-right shadow-xs">
+                <td className="py-3 text-right">
                   <div className="flex flex-col items-end gap-0.5">
                     <span className="font-medium tabular-nums">
                       {formatPosition(row.current.position)}

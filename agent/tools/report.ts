@@ -38,8 +38,8 @@ export default defineTool({
     "Produce a formal report in the console — title, period, headline figures, sections " +
     "with prose, tables and charts — and offer it as a downloadable PDF. Use it when the " +
     "person asks for an 'informe', 'reporte', 'resumen ejecutivo', a PDF, or something " +
-    "to send to somebody else. Read the data first with `pipeline`, `marketing`, `inbox` " +
-    "or `operations`; every number here must come from a tool that returned it on this " +
+    "to send to somebody else. Read the data first with `pipeline`, `marketing`, `inbox`, " +
+    "`operations`, `seo` or `web_fetch`; every number here must come from a tool that returned it on this " +
     "turn. For a quick answer with one chart, use `chart` instead — this is heavier and " +
     "the person has to read it. Console-only.",
   inputSchema: reportSpecSchema,

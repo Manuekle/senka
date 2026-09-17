@@ -5,7 +5,7 @@ import { useT } from "@/lib/i18n/provider";
 import { cn } from "@/lib/utils";
 import type { UIMessage } from "ai";
 import { HugeiconsIcon } from "@/components/icons/icon";
-import { ArrowDown02Icon, Download04Icon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, Download04Icon } from "@hugeicons/core-free-icons";
 import type { ComponentProps } from "react";
 import { useCallback } from "react";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
@@ -87,7 +87,7 @@ export const ConversationScrollButton = ({
         aria-label="Scroll to bottom"
         {...props}
       >
-        <HugeiconsIcon icon={ArrowDown02Icon} size={16} strokeWidth={1.75} />
+        <HugeiconsIcon icon={ArrowDown01Icon} size={16} strokeWidth={1.75} />
       </Button>
     )
   );

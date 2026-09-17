@@ -29,8 +29,9 @@ ${INTAKE}
 ## Steps
 
 1. **Read their side.** web_fetch the competitor's site: what they sell, their
-   published prices, what they claim, who they say it is for. Then web_search
-   for the last year — reviews, complaints, changes.
+   published prices, what they claim, who they say it is for. Then web_fetch
+   any reviews or news page the owner links. There is no web search here, so
+   say what could not be checked.
 2. **Read our side.** search_knowledge for this business's own prices, terms,
    guarantees, and delivery times. Both columns must come from documents, or
    the comparison is two opinions.

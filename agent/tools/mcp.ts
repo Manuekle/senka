@@ -25,9 +25,13 @@ import { probeMcpServer } from "../../lib/mcp-client";
 // change between turns, and would have to be re-validated locally anyway. The
 // model reads the schema from `tools` and passes arguments straight through.
 
+// Resolved per turn rather than per session: an owner who adds a server in
+// Conexiones and comes back to the same chat expects the next message to see
+// it — the connections brief in agent/instructions/connections.ts already
+// lists it, and a listed server with no tool behind it reads as broken.
 export default defineDynamic({
   events: {
-    "session.started": async () => {
+    "turn.started": async () => {
       const servers = await activeServers();
       if (servers.length === 0) return null;
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@/components/icons/icon";
-import { ArrowUp02Icon, ArrowDown02Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
+import { ArrowUp02Icon, ArrowDown01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
 import { StepEditor } from "./step-editor";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useT } from "@/lib/i18n/provider";
@@ -88,7 +88,7 @@ export function StepPanel({
           onClick={() => onMove("down")}
           className="text-[13px] text-muted-foreground hover:text-foreground active:scale-95"
         >
-          <HugeiconsIcon icon={ArrowDown02Icon} size={13} strokeWidth={1.75} />
+          <HugeiconsIcon icon={ArrowDown01Icon} size={13} strokeWidth={1.75} />
           {t("automations.moveDown")}
         </Button>
         <Button

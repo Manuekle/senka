@@ -34,8 +34,15 @@ import { SuggestionChip } from "@/components/ui/suggestion-chip";
 import { AgentLoading, type AgentLoadingMode } from "./chat/agent-loading";
 import { ChatInput, type ChatInputSubmitPayload } from "./chat/chat-input";
 import { restoreEveChat, type SavedEveChat } from "@/lib/eve-chat-restore";
+import { loadSessionAnswers, saveSessionAnswers, type SessionAnswers } from "@/lib/chat-input-answers";
+import { conversationMovedOn, inputRequestPhase, type InputAnswer } from "@/lib/chat-input-request";
+import type { EveDynamicToolPart, EveMessage } from "eve/react";
 
 const AGENT_NAME = "senka";
+/** How long a tab keeps following a turn it lost the stream of. A step can take
+ *  minutes (a long report, a slow subagent); a turn that is still silent after
+ *  this is better retried by hand than listened to forever. */
+const FOLLOW_BUDGET_MS = 10 * 60 * 1000;
 const MONITORING_HREF = process.env.NEXT_PUBLIC_MONITORING_URL;
 const CHAT_STORAGE_KEY = "senka:eve-chat:v1";
 
@@ -175,6 +182,13 @@ function AgentSession({
     return () => controller.abort();
   }, [auth, resetKey]);
 
+  // Stable, because the follow effect in ConnectedAgentSession depends on it
+  // and a new identity per render would restart the stream it is reading.
+  const handleReattach = useCallback((restored: SavedEveChat) => {
+    setSaved(restored);
+    setResetKey((k) => k + 1);
+  }, []);
+
   if (!saved) {
     return <AgentLoading mode={loadingMode} />;
   }
@@ -183,6 +197,7 @@ function AgentSession({
     <ConnectedAgentSession
       auth={auth}
       key={resetKey}
+      onReattach={handleReattach}
       onSignOut={onSignOut}
       onReset={() => {
         clearSavedChat();
@@ -196,11 +211,14 @@ function AgentSession({
 
 function ConnectedAgentSession({
   auth,
+  onReattach,
   onReset,
   onSignOut,
   saved,
 }: {
   readonly auth?: ClientAuth;
+  /** Remount on a transcript that caught up with the server. */
+  readonly onReattach: (restored: SavedEveChat) => void;
   readonly onReset: () => void;
   readonly onSignOut?: () => void;
   readonly saved: SavedEveChat;
@@ -218,6 +236,29 @@ function ConnectedAgentSession({
   });
   const eventsRef = useRef<HandleMessageStreamEvent[]>([...(saved.events ?? [])]);
   const sessionRef = useRef<SessionState>(clientSession.state);
+  const knownSessionRef = useRef<SessionState | undefined>(
+    clientSession.state.sessionId ? clientSession.state : undefined,
+  );
+  /**
+   * eve's client resets the session to empty when a stream ends without a
+   * turn boundary — which is exactly what a dropped stream is. Saving that
+   * threw the conversation's id away: the tab could not follow the turn still
+   * running on the server, a reload came back to half a transcript, and the
+   * next message opened a brand-new session. While the transcript is mid-turn,
+   * keep the last id this tab knew.
+   */
+  const rememberSession = (next: SessionState): SessionState => {
+    if (next.sessionId) {
+      knownSessionRef.current = next;
+      return next;
+    }
+    const last = eventsRef.current.at(-1);
+    const known = knownSessionRef.current;
+    if (known && last !== undefined && !isCurrentTurnBoundaryEvent(last)) {
+      return { ...known, streamIndex: eventsRef.current.length };
+    }
+    return next;
+  };
   const persistTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const persist = (immediately = false) => {
     if (persistTimerRef.current) clearTimeout(persistTimerRef.current);
@@ -242,20 +283,78 @@ function ConnectedAgentSession({
     session: clientSession,
     onEvent(event) {
       eventsRef.current.push(event);
-      sessionRef.current = clientSession.state;
+      sessionRef.current = rememberSession(clientSession.state);
       persist();
     },
     onFinish(snapshot) {
       eventsRef.current = [...snapshot.events];
-      sessionRef.current = snapshot.session;
+      sessionRef.current = rememberSession(snapshot.session);
       persist(true);
     },
     onSessionChange(session) {
-      sessionRef.current = session;
+      sessionRef.current = rememberSession(session);
       persist(true);
     },
   });
-  const isBusy = agent.status === "submitted" || agent.status === "streaming";
+  const agentBusy = agent.status === "submitted" || agent.status === "streaming";
+
+  // ── Following a turn the browser lost ───────────────────────────────────
+  // The turn runs on the server whether or not this tab is listening. Two
+  // ways the tab stops listening while it is still going: the stream is cut
+  // mid-turn (a proxy timeout, a laptop waking up — Chrome reports it as
+  // "network error", which eve's client does not treat as a disconnect and
+  // does not retry), or the page is reloaded mid-turn and the restore gives
+  // up after a second and a half. Either way the chat used to sit on a dead
+  // spinner or a red "La solicitud falló" over a reply that had in fact been
+  // written. So: read the session stream from where this transcript stops
+  // until the turn ends, then remount on the caught-up transcript.
+  const [resumeOnMount] = useState(() => isTurnInFlight(saved));
+  const streamDropped = agent.error !== undefined && isStreamDrop(agent.error);
+  // "unavailable": nothing to follow — the drop happened before the server
+  // ever named a session, so the ordinary error is the honest message.
+  const [followEnded, setFollowEnded] = useState<"failed" | "unavailable" | null>(null);
+  const [followNonce, setFollowNonce] = useState(0);
+  const following = !agentBusy && (resumeOnMount || streamDropped) && followEnded === null;
+  const offerFollowRetry = (streamDropped || resumeOnMount) && followEnded === "failed";
+  const isBusy = agentBusy || following;
+
+  useEffect(() => {
+    if (!following) return;
+    const session = { ...clientSession.state, ...sessionRef.current };
+    if (!session.sessionId) {
+      void Promise.resolve().then(() => setFollowEnded("unavailable"));
+      return;
+    }
+    const controller = new AbortController();
+    const before = eventsRef.current.length;
+    const client = new Client({
+      host: window.location.origin,
+      auth,
+      redirect: "error",
+      preserveCompletedSessions: true,
+    });
+    void restoreEveChat(
+      { events: [...eventsRef.current], session },
+      client.session(session),
+      AbortSignal.any([controller.signal, AbortSignal.timeout(FOLLOW_BUDGET_MS)]),
+      saveChat,
+    ).then((restored) => {
+      if (controller.signal.aborted) return;
+      if ((restored.events?.length ?? 0) > before) onReattach(restored);
+      else setFollowEnded("failed");
+    });
+    return () => controller.abort();
+    // `followNonce` is the retry button; the rest is stable for this mount.
+  }, [following, followNonce, auth, clientSession, onReattach]);
+
+  // ── Answers to the agent's questions ────────────────────────────────────
+  // Eve keeps a button answer only in its in-memory projection, so a reload or
+  // a conversation reopened from Historial forgot it. Kept here per session;
+  // see lib/chat-input-request.ts.
+  const [answers, setAnswers] = useState<SessionAnswers>(() =>
+    loadSessionAnswers(saved.session?.sessionId),
+  );
+  const pendingQuestion = findPendingQuestion(agent.data.messages, answers);
 
   // ── Model choice ────────────────────────────────────────────────────────
   const { data: catalog, loading: catalogLoading } = useModelCatalog();
@@ -336,9 +435,24 @@ function ConnectedAgentSession({
     void persistSessionWhenAccepted(clientSession, eventsRef, sessionRef);
     await result;
   }, [clientSession, sendTurn]);
+  const recordAnswers = useCallback((responses: readonly AgentInputResponse[]) => {
+    const recorded: Record<string, InputAnswer> = {};
+    for (const response of responses) {
+      recorded[response.requestId] = {
+        ...(response.optionId ? { optionId: response.optionId } : {}),
+        ...(response.text ? { text: response.text } : {}),
+      };
+    }
+    setAnswers((current) => ({ ...current, ...recorded }));
+    const sessionId = sessionRef.current.sessionId;
+    if (sessionId) saveSessionAnswers(sessionId, recorded);
+  }, []);
   const handleInputResponses = useCallback(
-    (inputResponses: readonly AgentInputResponse[]) => send({ inputResponses }),
-    [send],
+    async (inputResponses: readonly AgentInputResponse[]) => {
+      recordAnswers(inputResponses);
+      await send({ inputResponses });
+    },
+    [recordAnswers, send],
   );
 
   const handleInputSubmit = async (payload: ChatInputSubmitPayload) => {
@@ -361,6 +475,14 @@ function ConnectedAgentSession({
     const clientContext = payload.mentionedAgent
       ? `[Instrucción de Agente]: El usuario solicita la intervención de @${payload.mentionedAgent.name}. Especialidad: ${payload.mentionedAgent.description}. Si cuentas con la herramienta agent o el subagente ${payload.mentionedAgent.handle}, delega esta tarea al subagente ${payload.mentionedAgent.handle}. En su defecto, asume plenamente este rol para responder.`
       : undefined;
+
+    // Typing the answer to an open question instead of clicking it: eve resolves
+    // a reply that names an option on its own, but only the click used to be
+    // remembered, so the card forgot what was chosen. Record the match too.
+    if (pendingQuestion && fileParts.length === 0) {
+      const optionId = matchOption(pendingQuestion.request.options, text);
+      if (optionId) recordAnswers([{ requestId: pendingQuestion.request.requestId, optionId }]);
+    }
 
     if (fileParts.length === 0) {
       await send({
@@ -415,7 +537,9 @@ function ConnectedAgentSession({
       onSubmit={handleInputSubmit}
       onStop={handleStop}
       isBusy={isBusy}
-      placeholder={t("chat.sendPlaceholder") || "Ask anything..."}
+      placeholder={
+        pendingQuestion ? t("chat.inputAnswerPlaceholder") : t("chat.sendPlaceholder") || "Ask anything..."
+      }
       isEmpty={isEmpty}
     />
   );
@@ -458,7 +582,7 @@ function ConnectedAgentSession({
         </header>
       )}
 
-      {agent.error ? (
+      {(agent.error && !following) || offerFollowRetry ? (
         <div className="mx-auto w-full max-w-3xl shrink-0 px-4 pt-2 sm:px-6">
           <div className="flex items-start gap-3 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm shadow-[var(--shadow-soft)]">
             <HugeiconsIcon
@@ -467,10 +591,26 @@ function ConnectedAgentSession({
               strokeWidth={1.75}
               className="mt-0.5 shrink-0 text-destructive"
             />
-            <div>
-              <p className="font-medium">{t("chat.requestFailed")}</p>
-              <p className="mt-0.5 text-muted-foreground">{agent.error.message}</p>
+            <div className="min-w-0 flex-1">
+              <p className="font-medium">
+                {offerFollowRetry ? t("chat.connectionLost") : t("chat.requestFailed")}
+              </p>
+              <p className="mt-0.5 text-muted-foreground">
+                {offerFollowRetry ? t("chat.connectionLostDesc") : agent.error?.message}
+              </p>
             </div>
+            {offerFollowRetry ? (
+              <Button
+                onClick={() => {
+                  setFollowEnded(null);
+                  setFollowNonce((n) => n + 1);
+                }}
+                size="sm"
+                variant="outline"
+              >
+                {t("apiError.retry")}
+              </Button>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -480,15 +620,24 @@ function ConnectedAgentSession({
           <ConversationContent className="mx-auto w-full max-w-3xl gap-6 px-4 py-6 sm:px-6">
             {agent.data.messages.map((message, index) => (
               <AgentMessage
+                answers={answers}
                 canRespond={!isBusy}
+                isLast={index === agent.data.messages.length - 1}
                 isStreaming={
-                  agent.status === "streaming" && index === agent.data.messages.length - 1
+                  (agent.status === "streaming" || following) &&
+                  index === agent.data.messages.length - 1
                 }
                 key={message.id}
                 message={message}
                 onInputResponses={handleInputResponses}
               />
             ))}
+            {following && agent.data.messages.at(-1)?.role !== "assistant" ? (
+              <p className="flex items-center gap-2 pl-1 text-muted-foreground text-xs">
+                <span className="size-1.5 rounded-full bg-muted-foreground motion-safe:animate-pulse" />
+                {t("chat.reconnecting")}
+              </p>
+            ) : null}
           </ConversationContent>
           <ConversationScrollButton />
         </Conversation>
@@ -785,6 +934,59 @@ function StatusDot({ status }: { readonly status: AgentStatus }) {
       <span className={cn("relative inline-flex size-1.5 rounded-full transition-colors", tone)} />
     </span>
   );
+}
+
+/** A saved transcript whose last event is not a turn boundary: the tab stopped
+ *  listening while the server was still working. */
+function isTurnInFlight(saved: SavedEveChat): boolean {
+  const last = saved.events?.at(-1);
+  return Boolean(saved.session?.sessionId) && last !== undefined && !isCurrentTurnBoundaryEvent(last);
+}
+
+/** A stream the browser lost, as opposed to a turn the server failed. Chrome
+ *  says "network error" for a body cut mid-chunk, Safari "Load failed",
+ *  Firefox "NetworkError when attempting to fetch resource". */
+function isStreamDrop(error: Error): boolean {
+  return /network ?error|failed to fetch|fetch failed|load failed|terminated|incomplete/i.test(error.message);
+}
+
+type PendingQuestion = {
+  readonly part: EveDynamicToolPart;
+  readonly request: NonNullable<NonNullable<NonNullable<EveDynamicToolPart["toolMetadata"]>["eve"]>["inputRequest"]>;
+};
+
+/** The question in the newest message still waiting on the person, if any. */
+function findPendingQuestion(
+  messages: readonly EveMessage[],
+  answers: SessionAnswers,
+): PendingQuestion | undefined {
+  const last = messages.at(-1);
+  if (!last || last.role !== "assistant") return undefined;
+  for (const part of last.parts) {
+    if (part.type !== "dynamic-tool") continue;
+    const request = part.toolMetadata?.eve?.inputRequest;
+    if (!request) continue;
+    const phase = inputRequestPhase({
+      state: part.state,
+      answer: part.toolMetadata?.eve?.inputResponse ?? answers[request.requestId],
+      movedOn: conversationMovedOn(last, true, part),
+    });
+    if (phase === "pending") return { part, request };
+  }
+  return undefined;
+}
+
+/** The option a typed reply names — by id, label, or 1-based position — the
+ *  same three ways eve itself resolves a text reply to a pending request. */
+function matchOption(options: PendingQuestion["request"]["options"], text: string): string | undefined {
+  const value = text.trim().toLowerCase();
+  if (!value || !options?.length) return undefined;
+  const byName = options.find(
+    (option) => option.id.toLowerCase() === value || option.label.trim().toLowerCase() === value,
+  );
+  if (byName) return byName.id;
+  const position = /^\d+$/.test(value) ? Number(value) : Number.NaN;
+  return options[position - 1]?.id;
 }
 
 function fileToDataUrl(file: File): Promise<string> {
